@@ -1,0 +1,35 @@
+<html>
+  <head>
+    <script src="scripts/jquery-3.2.1.min.js"></script>
+    <script src="scripts/options.js"></script>
+    <link rel="stylesheet" type="text/css" href="styles/style.css">
+    <title> Time Snatch Options </title>
+  </head>
+
+  <body>
+
+    <div class="header">
+      <img class="logo" src="images/logo128.png">
+      <div> Time Snatch </div>
+    </div>
+
+    <div class="body">
+
+      <div class="section"> Block a website </div>
+
+      <form id="blockForm" autocomplete="off">
+        <label for="blockName">Block </label>
+        <input type="text" placeholder="example.com" id="blockName" autofocus required>
+        <br>
+        <label for="blockName">Allow </label>
+        <input type="number" placeholder="5" id="blockTime" required> minutes per day.
+        <br>
+        <label for="blockRedirect">Redirect to </label>
+        <input type="text" placeholder="productivity.com" id="blockRedirect"> when your daily allowance is over. (Optional)
+        <br>
+        <input type="submit" class="optionsButton" id="blockButton" value="Block Website">
+      </form>
+
+    </div>
+  </body>
+</html>
