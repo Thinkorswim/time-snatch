@@ -10,8 +10,6 @@ $(function(){
         resetDayTimes();
         listBlockedWebsites()
     }
-
-    chrome.storage.sync.set({'date': currentDate});
   });
 
   chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
@@ -51,13 +49,24 @@ $(function(){
           $("#popupList table").html('');
 
           for (i in blockList) {
+              var timeLeft = getMinutesAndSeconds(blockList[i].timeDay, blockList[i].timeTotal);
+              var minutes = Math.floor((blockList[i].timeTotal-blockList[i].timeDay) / 60);
+              var seconds = (blockList[i].timeTotal-blockList[i].timeDay) % 60;
+
+              if(minutes < 0 || (minutes == 0 && seconds == 0)){
+                timeLeft = "None";
+              }
+
               var popupRow = '<tr id="blocked' + i + '">';
               popupRow += '<td class="pBlocked">' + blockList[i].url + '</td>';
-              popupRow += '<td class="pTime">' + getMinutesAndSeconds(blockList[i].timeDay, blockList[i].timeTotal) + '</td>';
+              popupRow += '<td class="pTime">' + timeLeft + '</td>';
               popupRow += "</tr>"
 
               $("#popupList table").append(popupRow);
           }
+        }else{
+          var popupRow = '<td class="noBlocked"> No blocked websites :( </td>';
+          $("#popupList table").append(popupRow);
         }
     });
   }

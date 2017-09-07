@@ -1,24 +1,15 @@
 chrome.runtime.onInstalled.addListener(function (object) {
     if(object.reason === 'install'){
+      chrome.storage.sync.set({'date': getDateFormat(new Date())});
       chrome.runtime.openOptionsPage();
     }
 });
 
 chrome.browserAction.setBadgeBackgroundColor({ color: "#e74c3c"});
 
-var currentDate;
-chrome.storage.sync.get('date', function(data){
-  currentDate = getDateFormat(new Date());
-
-  if(data.date && currentDate != data.date){
-      resetDayTimes();
-  }
-
-  chrome.storage.sync.set({'date': currentDate});
-});
-
 blockInterval = null;
 block = null;
+var updateDate;
 
 
 chrome.tabs.onCreated.addListener(function(tab) {
@@ -76,6 +67,10 @@ function checkBlocked(tab){
               }
 
               if(blockInterval == null){
+                chrome.storage.sync.get('date', function(data){
+                  updateDate = data.date;
+                });
+
                 startBlocking();
               }
             }
@@ -106,9 +101,12 @@ function updateTime(){
          time: getMinutesAndSeconds(block.timeDay, block.timeTotal)
       });
 
-      if(currentDate != getDateFormat(new Date())){
+
+      if(updateDate != getDateFormat(new Date())){
         resetDayTimes();
       }
+
+
 
       if(block.timeTotal-block.timeDay == 300){
         createNotification("Time Snatch (5 minutes)", block.url + " will be blocked in 5 minutes! Enjoy while you still can!");
@@ -149,7 +147,7 @@ function redirectTo(url, tabId){
 }
 
 function resetDayTimes(){
-  currentDate = getDateFormat(new Date());
+  var currentDate = getDateFormat(new Date());
   chrome.storage.sync.set({'date': currentDate});
 
   if(block != null){
