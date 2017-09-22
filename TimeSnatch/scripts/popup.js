@@ -3,12 +3,12 @@ $(function(){
   // On Load
   listBlockedWebsites();
 
+
   chrome.storage.sync.get('date', function(data){
     var currentDate = getDateFormat(new Date());
 
     if(data.date && currentDate != data.date){
         resetDayTimes();
-        listBlockedWebsites()
     }
   });
 
@@ -38,6 +38,8 @@ $(function(){
 
             chrome.storage.sync.set({'blockList': blockList});
           }
+
+          listBlockedWebsites();
       });
   }
 

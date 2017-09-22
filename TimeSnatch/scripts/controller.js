@@ -9,8 +9,11 @@ chrome.browserAction.setBadgeBackgroundColor({ color: "#e74c3c"});
 
 blockInterval = null;
 block = null;
-var updateDate;
 
+var updateDate;
+chrome.storage.sync.get('date', function(data){
+  updateDate = data.date;
+});
 
 chrome.tabs.onCreated.addListener(function(tab) {
   if(tab.active && tab.url){
@@ -43,13 +46,16 @@ chrome.windows.onFocusChanged.addListener(function(windowId){
 });
 
 function checkBlocked(tab){
+  if(updateDate != getDateFormat(new Date())){
+    resetDayTimes();
+  }
+  
   chrome.storage.sync.get('blockList', function(data){
       if(data.blockList && data.blockList.length){
         var blockList = data.blockList;
         for(i in blockList){
           var currentBlock = blockList[i];
           if(getDomain(tab.url) == currentBlock.url){
-
             setBadge(getMinutesAndSeconds(currentBlock.timeDay, currentBlock.timeTotal));
 
             if(currentBlock.timeDay >= currentBlock.timeTotal){
@@ -67,10 +73,6 @@ function checkBlocked(tab){
               }
 
               if(blockInterval == null){
-                chrome.storage.sync.get('date', function(data){
-                  updateDate = data.date;
-                });
-
                 startBlocking();
               }
             }
@@ -147,12 +149,11 @@ function redirectTo(url, tabId){
 }
 
 function resetDayTimes(){
-  var currentDate = getDateFormat(new Date());
-  chrome.storage.sync.set({'date': currentDate});
-
   if(block != null){
     block.timeDay = 0;
   }
+  var currentDate = getDateFormat(new Date());
+  chrome.storage.sync.set({'date': currentDate});
 
   chrome.storage.sync.get('blockList', function(data){
       if(data.blockList && data.blockList.length){
@@ -164,6 +165,8 @@ function resetDayTimes(){
         chrome.storage.sync.set({'blockList': blockList});
       }
   });
+
+  updateDate = currentDate;
 }
 
 function setBadge(text){
