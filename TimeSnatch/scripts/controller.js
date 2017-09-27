@@ -49,7 +49,7 @@ function checkBlocked(tab){
   if(updateDate != getDateFormat(new Date())){
     resetDayTimes();
   }
-  
+
   chrome.storage.sync.get('blockList', function(data){
       if(data.blockList && data.blockList.length){
         var blockList = data.blockList;
@@ -99,16 +99,15 @@ function updateTime(){
       block.timeDay += 1;
       setBadge(getMinutesAndSeconds(block.timeDay, block.timeTotal));
       chrome.runtime.sendMessage({
-         listId: block.listId,
-         time: getMinutesAndSeconds(block.timeDay, block.timeTotal)
+        type: "updateTime",
+        listId: block.listId,
+        time: getMinutesAndSeconds(block.timeDay, block.timeTotal)
       });
 
 
       if(updateDate != getDateFormat(new Date())){
         resetDayTimes();
       }
-
-
 
       if(block.timeTotal-block.timeDay == 300){
         createNotification("Time Snatch (5 minutes)", block.url + " will be blocked in 5 minutes! Enjoy while you still can!");
@@ -236,3 +235,12 @@ function stopBlocking(){
   clearInterval(blockInterval);
   blockInterval = null;
 }
+
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  if(request.type == "checkBlocked" && blockInterval != null){
+    chrome.runtime.sendMessage({
+      listId: block.listId,
+      type: "bold"
+    });
+  }
+});

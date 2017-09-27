@@ -33,8 +33,8 @@ $(function(){
         console.log(parseInt($("#blockTime").val()));
 
         var newBlock = {
-          "url": getDomain($("#blockName").val()),
-          "redirectUrl": getDomain(redirectUrl),
+          "url": getDomain($("#blockName").val()).toLowerCase(),
+          "redirectUrl": getDomain(redirectUrl).toLowerCase(),
           "timeTotal": Math.abs(parseInt($("#blockTime").val()))*60,
           "timeDay": 0
         }

@@ -1,8 +1,10 @@
 $(function(){
-
   // On Load
   listBlockedWebsites();
 
+  chrome.runtime.sendMessage({
+    type: "checkBlocked",
+  });
 
   chrome.storage.sync.get('date', function(data){
     var currentDate = getDateFormat(new Date());
@@ -13,9 +15,13 @@ $(function(){
   });
 
   chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    $("#blocked" + request.listId + ' td:eq("1")').html(request.time);
-    // $("#blocked" + request.listId).css('background-color', '#2980b9');
-    // $("#blocked" + request.listId).css('color', 'white');
+
+    if(request.type == "updateTime"){
+      $("#blocked" + request.listId + ' td:eq("1")').html(request.time);
+    }else if(request.type == "bold"){
+      $("#blocked" + request.listId).css('font-weight', '500');
+      $("#blocked" + request.listId).css('color', '#2980b9');
+    }
   });
 
 
