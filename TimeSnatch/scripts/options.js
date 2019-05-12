@@ -34,12 +34,14 @@ $(function(){
 
         var newBlock = {
           "url": getDomain($("#blockName").val()).toLowerCase(),
+          "blockIncognito": $("#blockIncognito").is(':checked'),
           "redirectUrl": getDomain(redirectUrl).toLowerCase(),
           "timeTotal": Math.abs(parseInt($("#blockTime").val()))*60,
           "timeDay": 0
         }
 
         blockList.push(newBlock);
+        blockList[0].date = getDateFormat(new Date());
 
         chrome.storage.sync.set({'blockList': blockList}, function(){
           location.reload();
@@ -56,15 +58,23 @@ $(function(){
       var blockUrl = $('#blockRow'+blockId +' td:eq("0")').text();
       var blockTime = parseInt($('#blockRow'+blockId +' td:eq("1")').text().slice(0, -8));
       var blockRedirect = $('#blockRow'+blockId +' td:eq("3")').text();
+      var blockIncognito = $('#blockRow'+ blockId +' td:eq("4")').text();
 
-      var updateRow = '<td><input type="text" value="' + blockUrl + '" autofocus required></td>';
-      updateRow += '<td><input type="number" value="' + blockTime + '" required></td>';
+      if( blockIncognito == "true"){
+        blockIncognito = "checked";
+      }else{
+        blockIncognito = "";
+      }
+
+      var updateRow = '<td id="websiteRow"><input type="text" value="' + blockUrl + '" autofocus required></td>';
+      updateRow += '<td id="timeRow"><input type="number" value="' + blockTime + '" required></td>';
       updateRow += '<td></td>';
       if(blockRedirect == 'default'){
-        updateRow += '<td><input type="text" placeholder="Optional"></td>';
+        updateRow += '<td id="redirectRow"><input type="text" placeholder="Optional"></td>';
       }else{
-        updateRow += '<td><input type="text" value="' + blockRedirect + '" placeholder="Optional"></td>';
+        updateRow += '<td id="redirectRow"><input type="text" value="' + blockRedirect + '" placeholder="Optional"></td>';
       }
+      updateRow += '<td id="incognitoRow"><label class="container2"><input type="checkbox" id="blockIncognito" ' + blockIncognito + '><span class="checkmark2"></span></label></td>';
       updateRow += '<td class="cUpdate">';
       updateRow += '<button style="background-color: #e74c3c; border-color:#e74c3c!important;" id="deleteButton' + blockId + '" class="optionsButton deleteButton"><img src="../images/garbage.png"></button>';
       updateRow += '<button style="background-color: #27ae60; border-color:#27ae60!important;" id="saveButton' + blockId + '" class="optionsButton saveButton"><img src="../images/save.png"></button>';
@@ -82,6 +92,7 @@ $(function(){
     var blockUrl = $('#blockRow'+blockId +' td:eq("0") input:eq("0")').val();
     var blockTime = parseInt($('#blockRow'+blockId +' td:eq("1") input:eq("0")').val());
     var blockRedirect = $('#blockRow'+blockId +' td:eq("3") input:eq("0")').val();
+    var blockIncognito = $('#blockRow'+blockId +' td:eq("4") input:eq("0")').is(':checked');
 
     chrome.storage.sync.get('blockList', function(data){
         var blockList = data.blockList;
@@ -93,6 +104,7 @@ $(function(){
           blockList[blockId].redirectUrl = blockRedirect;
         }
         blockList[blockId].timeTotal = blockTime*60;
+        blockList[blockId].blockIncognito = blockIncognito;
 
         chrome.storage.sync.set({'blockList': blockList}, function(){
           location.reload();
@@ -106,6 +118,10 @@ $(function(){
     chrome.storage.sync.get('blockList', function(data){
         var blockList = data.blockList;
         blockList.splice(blockId, 1);
+
+        if (blockList[0]){
+          blockList[0].date = getDateFormat(new Date());
+        }
 
         chrome.storage.sync.set({'blockList': blockList}, function(){
           location.reload();
@@ -127,6 +143,7 @@ $(function(){
     blockedListSection += '<th> Allowed per day </th>';
     blockedListSection += '<th> Time left </th>';
     blockedListSection += '<th> Redirect </th>';
+    blockedListSection += '<th> Incognito </th>';
     blockedListSection += '<th class="cUpdate"> </th>';
     blockedListSection += '</tr></table></div>';
 
@@ -147,6 +164,7 @@ $(function(){
     rowAppend += '<td>' + blockedWebsite.timeTotal/60 + " minutes </td>";
     rowAppend += '<td>' + timeLeft + "</td>";
     rowAppend += '<td>' + blockedWebsite.redirectUrl + "</td>";
+    rowAppend += '<td id="incognitoRow">' + blockedWebsite.blockIncognito + "</td>";
     rowAppend += '<td class="cUpdate"> <button id="blockButton' + blockId + '" class="optionsButton updateButton">';
     rowAppend += '<img src="../images/edit.png">';
     rowAppend += '</button> </td>';
@@ -193,6 +211,10 @@ $(function(){
       hostname = hostname.split('?')[0];
 
       return hostname;
+  }
+
+  function getDateFormat(date){
+    return date.getDate().toString() + "/" + date.getMonth().toString() + "/" + date.getFullYear().toString();
   }
 
 });

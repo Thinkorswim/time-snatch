@@ -37,7 +37,7 @@ table{
 
 th{
   width: auto;
-  min-width: 150px;
+  min-width: 120px;
   text-align: left;
   background: #2980b9;
   color: white;
@@ -48,7 +48,23 @@ th{
 td{
   padding: 7px 7px 7px 10px;
   width: auto;
-  min-width: 150px;
+  min-width: 0px;
+}
+
+#timeRow input {
+  width: 100px;
+}
+
+#redirectRow input {
+  width: 170px;
+}
+
+#websiteRow input {
+  width: 220px;
+}
+
+#incognitoRow {
+  padding-left: 20px
 }
 
 .header{
@@ -251,6 +267,134 @@ td input{
 
 #cogButton{
   cursor: pointer;
+}
+
+.container {
+  display: block;
+  position: relative;
+
+  margin-top: 12px;
+  cursor: pointer;
+  font-size: 18px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+
+.container2 {
+  display: block;
+  position: relative;
+  cursor: pointer;
+  font-size: 18px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Hide the browser's default checkbox */
+.container2 input {
+  opacity: 0;
+  width: 0;
+}
+
+
+/* Hide the browser's default checkbox */
+.container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+/* Create a custom checkbox */
+.checkmark {
+  margin-left: 157px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 25px;
+  width: 25px;
+  background-color: #ccc;
+}
+
+.checkmark2 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 25px;
+  width: 25px;
+  background-color: #ccc;
+  margin-top: -2px;
+  margin-left: 0px;
+}
+
+/* On mouse-over, add a grey background color */
+.container:hover input ~ .checkmark {
+  background-color: #ccc;
+}
+
+.container2:hover input ~ .checkmark2 {
+  background-color: #ccc;
+}
+
+/* When the checkbox is checked, add a blue background */
+.container input:checked ~ .checkmark {
+  background-color: #2980b9;
+}
+
+.container2 input:checked ~ .checkmark2 {
+  background-color: #2980b9;
+}
+
+/* Create the checkmark/indicator (hidden when not checked) */
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.checkmark2:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+/* Show the checkmark when checked */
+.container input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.container2 input:checked ~ .checkmark2:after {
+  display: block;
+}
+
+/* Style the checkmark/indicator */
+.container .checkmark:after {
+  left: 9px;
+  top: 5px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
+}
+
+.container2 .checkmark2:after {
+  left: 9px;
+  top: 5px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
 }
 
 .g1{

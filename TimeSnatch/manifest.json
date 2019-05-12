@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Time Snatch",
   "short_name": "Time Snatch",
-  "version": "1.0.6",
+  "version": "1.2.0",
   "description": "Block websites, control your browsing patterns and beat procrastination.",
   "icons": {
     "128": "images/logo128.png",

@@ -6,12 +6,10 @@ $(function(){
     type: "checkBlocked",
   });
 
-  chrome.storage.sync.get('date', function(data){
-    var currentDate = getDateFormat(new Date());
-
-    if(data.date && currentDate != data.date){
+  chrome.storage.sync.get('blockList', function(data){
+      if(typeof data.blockList !== 'undefined' && data.blockList[0]['date'] != getDateFormat(new Date())){
         resetDayTimes();
-    }
+      }
   });
 
   chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
@@ -89,7 +87,7 @@ $(function(){
   }
 
   function getDateFormat(date){
-    return date.getDay().toString() + "/" + date.getMonth().toString() + "/" + date.getFullYear().toString();
+    return date.getDate().toString() + "/" + date.getMonth().toString() + "/" + date.getFullYear().toString();
   }
 
 });
