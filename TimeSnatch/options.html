@@ -22,10 +22,15 @@
         <input type="text" placeholder="example.com" id="blockName" autofocus required>
         <br>
         <label for="blockName">Allow </label>
-        <input type="number" placeholder="5" id="blockTime" required> minutes per day (0 to block completely).
+        <input type="number" placeholder="5" id="blockTime" required> minutes per day (0 to block completely)
         <br>
         <label for="blockRedirect">Redirect to </label>
-        <input type="text" placeholder="productivity.com" id="blockRedirect"> when your daily allowance is over. (Optional)
+        <input type="text" placeholder="productivity.com" id="blockRedirect"> when your daily allowance is over (Optional)
+        <br>
+        <label>Complete block from </label>
+        <input type="time" id="start_time" name="start_time">
+        <label> to </label>
+        <input type="time" id="end_time" name="end_time">  (Optional)
         <br>
         <label class="container">
           <input type="checkbox" id="blockIncognito" checked="checked">Block in incognito &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp (You need to allow the extension in incognito mode as shown <a href="https://www.itsupportguides.com/knowledge-base/google-chrome/google-chrome-how-to-enable-extensions-in-incognito/">here</a>)

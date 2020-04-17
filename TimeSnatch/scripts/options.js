@@ -8,7 +8,7 @@ $(function(){
 
         var blockList = data.blockList;
 
-        for (i in blockList) {
+        for (var i in blockList) {
           addBlockedRow(blockList[i], i);
         }
       }
@@ -30,15 +30,42 @@ $(function(){
           redirectUrl = $("#blockRedirect").val();
         }
 
-        console.log(parseInt($("#blockTime").val()));
-
         var newBlock = {
           "url": getDomain($("#blockName").val()).toLowerCase(),
           "blockIncognito": $("#blockIncognito").is(':checked'),
           "redirectUrl": getDomain(redirectUrl).toLowerCase(),
           "timeTotal": Math.abs(parseInt($("#blockTime").val()))*60,
           "timeDay": 0
+        };
+
+
+        var st = $("#start_time").val();
+        var et = $("#end_time").val();
+
+        if (st != "" || et != ""){
+          hs = parseInt(st.split(":")[0]);
+          ms = parseInt(st.split(":")[1]);
+
+          he = parseInt(et.split(":")[0]);
+          me = parseInt(et.split(":")[1]);
+
+          if (hs <= he) {
+            if (hs == he) {
+              if (ms < me) {
+                newBlock.hs = hs;
+                newBlock.ms = ms;
+                newBlock.he = he;
+                newBlock.me = me;
+              }
+            } else {
+              newBlock.hs = hs;
+              newBlock.ms = ms;
+              newBlock.he = he;
+              newBlock.me = me;
+            }
+          }
         }
+
 
         blockList.push(newBlock);
         blockList[0].date = getDateFormat(new Date());
@@ -168,13 +195,13 @@ $(function(){
     rowAppend += '<td class="cUpdate"> <button id="blockButton' + blockId + '" class="optionsButton updateButton">';
     rowAppend += '<img src="../images/edit.png">';
     rowAppend += '</button> </td>';
-    rowAppend += "</tr>"
+    rowAppend += "</tr>";
 
     $("#blockList table").append(rowAppend);
   }
 
   function getMinutesAndSeconds(day, total){
-    var minutes = (Math.floor((total-day) / 60)).toString()
+    var minutes = (Math.floor((total-day) / 60)).toString();
     var seconds = ((total - day) % 60);
     if(seconds < 10){
       seconds = '0' + seconds.toString();

@@ -48,15 +48,42 @@ chrome.windows.onFocusChanged.addListener(function(windowId){
 
 function checkBlocked(tab){
   chrome.storage.sync.get('blockList', function(data){
-      if(typeof data.blockList !== 'undefined' && typeof data.blockList[0] !== 'undefined' && data.blockList[0]['date'] != getDateFormat(new Date())){
+      if(typeof data.blockList !== 'undefined' && typeof data.blockList[0] !== 'undefined' && data.blockList[0].date != getDateFormat(new Date())){
         resetDayTimes();
       }
 
       if(data.blockList && data.blockList.length){
         var blockList = data.blockList;
-        for(i in blockList){
+        for(var i in blockList){
           var currentBlock = blockList[i];
           if(getDomain(tab.url) == currentBlock.url){
+
+            var today = new Date();
+            var hc = parseInt(today.getHours());
+            var mc = parseInt(today.getMinutes());
+
+            if (currentBlock.hs && currentBlock.he && currentBlock.ms  && currentBlock.me){
+              if (currentBlock.hs == hc && currentBlock.he == hc){
+                if (currentBlock.ms <= mc && currentBlock.me >= mc){
+                  redirectTo(currentBlock.redirectUrl, tab.id);
+                  continue;
+                }
+              } else if (currentBlock.hs == hc) {
+                if (currentBlock.ms <= mc){
+                  redirectTo(currentBlock.redirectUrl, tab.id);
+                  continue;
+                }
+              } else if (currentBlock.he == hc) {
+                if (currentBlock.me >= mc){
+                  redirectTo(currentBlock.redirectUrl, tab.id);
+                  continue;
+                }
+              } else if (currentBlock.hs < hc && currentBlock.he > hc) {
+                redirectTo(currentBlock.redirectUrl, tab.id);
+                continue;
+              }
+            }
+
             setBadge(getMinutesAndSeconds(currentBlock.timeDay, currentBlock.timeTotal));
 
             if(currentBlock.timeDay >= currentBlock.timeTotal){
@@ -74,8 +101,9 @@ function checkBlocked(tab){
                 "timeTotal": currentBlock.timeTotal,
                 "redirectUrl": currentBlock.redirectUrl,
                 "blockList": blockList,
+                "blockIncognito": currentBlock.blockIncognito,
                 "date": blockList[0].date
-              }
+              };
 
 
               if(blockInterval == null){
@@ -132,16 +160,15 @@ function syncBlockedData(){
   i = block.listId;
   blockList = block.blockList;
 
-  if(typeof blockList.blockList !== 'undefined' && blockList.blockList[0]['date'] != getDateFormat(new Date())){
+  if(typeof blockList.blockList !== 'undefined' && blockList.blockList[0].date != getDateFormat(new Date())){
     resetDayTimes();
   }else{
-    console.log(block);
     blockList[i] = {
       "url": blockList[i].url,
       "redirectUrl": blockList[i].redirectUrl,
       "timeTotal": blockList[i].timeTotal,
       "timeDay": block.timeDay,
-    }
+    };
 
     if(i == 0){
       blockList[0].date = getDateFormat(new Date());
@@ -168,7 +195,7 @@ function resetDayTimes(){
 
       if(data.blockList && data.blockList.length){
         var blockList = data.blockList;
-        for(i in blockList){
+        for(var i in blockList){
           blockList[i].timeDay = 0;
         }
 
@@ -182,7 +209,7 @@ function setBadge(text){
 }
 
 function getMinutesAndSeconds(day, total){
-  var minutes = (Math.floor((total-day) / 60)).toString()
+  var minutes = (Math.floor((total-day) / 60)).toString();
   var seconds = ((total - day) % 60);
   if(seconds < 10){
     seconds = '0' + seconds.toString();

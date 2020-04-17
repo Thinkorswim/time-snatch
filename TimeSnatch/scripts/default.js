@@ -80,7 +80,7 @@ $(function(){
       "quote": 'Until you value yourself, you will not value your time. Until you value your time, you will not do anything with it',
       "author": "M. Scott Peck"
     },
-  ]
+  ];
 
 var quote = Math.floor((Math.random() * quotes.length));
 var background = "g" + Math.floor((Math.random() * 21) + 1);
@@ -90,11 +90,11 @@ $("body").addClass(background);
 var quoteHtml = "<div>&#8220; ";
 quoteHtml +=  quotes[quote].quote;
 quoteHtml += ".	&#8221;</div>";
-quoteHtml += '<div class="quoteAuthor"> - '
+quoteHtml += '<div class="quoteAuthor"> - ';
 quoteHtml += quotes[quote].author;
 quoteHtml += "</div>";
 
-$(".quoteCenter").html(quoteHtml)
+$(".quoteCenter").html(quoteHtml);
 
 
 //

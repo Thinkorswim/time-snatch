@@ -7,7 +7,7 @@ $(function(){
   });
 
   chrome.storage.sync.get('blockList', function(data){
-      if(typeof data.blockList !== 'undefined' && data.blockList[0]['date'] != getDateFormat(new Date())){
+      if(typeof data.blockList !== 'undefined' && data.blockList[0].date != getDateFormat(new Date())){
         resetDayTimes();
       }
   });
@@ -36,7 +36,7 @@ $(function(){
       chrome.storage.sync.get('blockList', function(data){
           if(data.blockList && data.blockList.length){
             var blockList = data.blockList;
-            for(i in blockList){
+            for(var i in blockList){
               blockList[i].timeDay = 0;
             }
 
@@ -54,7 +54,7 @@ $(function(){
           var blockList = data.blockList;
           $("#popupList table").html('');
 
-          for (i in blockList) {
+          for (var i in blockList) {
               var timeLeft = getMinutesAndSeconds(blockList[i].timeDay, blockList[i].timeTotal);
               var minutes = Math.floor((blockList[i].timeTotal-blockList[i].timeDay) / 60);
               var seconds = (blockList[i].timeTotal-blockList[i].timeDay) % 60;
@@ -66,19 +66,19 @@ $(function(){
               var popupRow = '<tr id="blocked' + i + '">';
               popupRow += '<td class="pBlocked">' + blockList[i].url + '</td>';
               popupRow += '<td class="pTime">' + timeLeft + '</td>';
-              popupRow += "</tr>"
+              popupRow += "</tr>";
 
               $("#popupList table").append(popupRow);
           }
         }else{
-          var popupRow = '<td class="noBlocked"> No blocked websites :( </td>';
-          $("#popupList table").append(popupRow);
+          var apopupRow = '<td class="noBlocked"> No blocked websites :( </td>';
+          $("#popupList table").append(apopupRow);
         }
     });
   }
 
   function getMinutesAndSeconds(day, total){
-    var minutes = (Math.floor((total-day) / 60)).toString()
+    var minutes = (Math.floor((total-day) / 60)).toString();
     var seconds = ((total - day) % 60);
     if(seconds < 10){
       seconds = '0' + seconds.toString();
