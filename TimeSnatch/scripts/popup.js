@@ -7,7 +7,7 @@ $(function(){
   });
 
   chrome.storage.sync.get('blockList', function(data){
-      if(typeof data.blockList !== 'undefined' && data.blockList[0].date != getDateFormat(new Date())){
+      if (typeof data.blockList[0] !== 'undefined' && data.blockList[0].date != getDateFormat(new Date())){
         resetDayTimes();
       }
   });

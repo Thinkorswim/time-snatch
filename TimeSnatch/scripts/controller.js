@@ -3,7 +3,7 @@ chrome.runtime.onInstalled.addListener(function (object) {
       chrome.runtime.openOptionsPage();
     }else if(object.reason == "update"){
       chrome.storage.sync.get('blockList', function(data){
-        if(typeof data.blockList !== 'undefined' && data.blockList[0] !== 'undefined'){
+        if(typeof data.blockList[0] !== 'undefined' && data.blockList[0] !== 'undefined'){
           data.blockList[0].date = getDateFormat(new Date());
           chrome.storage.sync.set({'blockList': data.blockList});
         }
@@ -56,13 +56,13 @@ function checkBlocked(tab){
         var blockList = data.blockList;
         for(var i in blockList){
           var currentBlock = blockList[i];
-          if(getDomain(tab.url) == currentBlock.url){
+          if (getDomain(tab.url) == currentBlock.url){
 
             var today = new Date();
             var hc = parseInt(today.getHours());
             var mc = parseInt(today.getMinutes());
 
-            if (currentBlock.hs && currentBlock.he && currentBlock.ms  && currentBlock.me){
+            if (currentBlock.hs && currentBlock.he && currentBlock.ms && currentBlock.me){
               if (currentBlock.hs == hc && currentBlock.he == hc){
                 if (currentBlock.ms <= mc && currentBlock.me >= mc){
                   redirectTo(currentBlock.redirectUrl, tab.id);

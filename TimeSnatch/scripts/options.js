@@ -66,7 +66,6 @@ $(function(){
           }
         }
 
-
         blockList.push(newBlock);
         blockList[0].date = getDateFormat(new Date());
 
