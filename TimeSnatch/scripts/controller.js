@@ -62,7 +62,8 @@ function checkBlocked(tab){
             var hc = parseInt(today.getHours());
             var mc = parseInt(today.getMinutes());
 
-            if (currentBlock.hs && currentBlock.he && currentBlock.ms && currentBlock.me){
+            if (currentBlock.hs != undefined && currentBlock.he != undefined &&
+                currentBlock.ms != undefined && currentBlock.me != undefined ){
               if (currentBlock.hs == hc && currentBlock.he == hc){
                 if (currentBlock.ms <= mc && currentBlock.me >= mc){
                   redirectTo(currentBlock.redirectUrl, tab.id);
@@ -104,6 +105,14 @@ function checkBlocked(tab){
                 "blockIncognito": currentBlock.blockIncognito,
                 "date": blockList[0].date
               };
+
+              if (currentBlock.hs != undefined && currentBlock.ms != undefined &&
+                  currentBlock.he != undefined && currentBlock.me != undefined) {
+                  block.hs = currentBlock.hs;
+                  block.ms = currentBlock.ms;
+                  block.he = currentBlock.he;
+                  block.me = currentBlock.me;
+              }
 
 
               if(blockInterval == null){
@@ -163,18 +172,41 @@ function syncBlockedData(){
   if(typeof blockList.blockList !== 'undefined' && blockList.blockList[0].date != getDateFormat(new Date())){
     resetDayTimes();
   }else{
-    blockList[i] = {
-      "url": blockList[i].url,
-      "redirectUrl": blockList[i].redirectUrl,
-      "timeTotal": blockList[i].timeTotal,
-      "timeDay": block.timeDay,
-    };
+    if (blockList[i].hs != undefined && blockList[i].ms != undefined &&
+        blockList[i].he != undefined && blockList[i].me != undefined) {
 
-    if(i == 0){
-      blockList[0].date = getDateFormat(new Date());
+        blockList[i] = {
+          "url": blockList[i].url,
+          "redirectUrl": blockList[i].redirectUrl,
+          "timeTotal": blockList[i].timeTotal,
+          "timeDay": block.timeDay,
+          "blockIncognito": blockList[i].blockIncognito,
+          "hs": blockList[i].hs,
+          "ms": blockList[i].ms,
+          "he": blockList[i].he,
+          "me": blockList[i].me
+        };
+
+        if(i == 0){
+          blockList[0].date = getDateFormat(new Date());
+        }
+
+        chrome.storage.sync.set({'blockList': blockList});
+    } else {
+      blockList[i] = {
+        "url": blockList[i].url,
+        "redirectUrl": blockList[i].redirectUrl,
+        "timeTotal": blockList[i].timeTotal,
+        "timeDay": block.timeDay,
+        "blockIncognito": blockList[i].blockIncognito,
+      };
+
+      if(i == 0){
+        blockList[0].date = getDateFormat(new Date());
+      }
+
+      chrome.storage.sync.set({'blockList': blockList});
     }
-
-    chrome.storage.sync.set({'blockList': blockList});
   }
 }
 
