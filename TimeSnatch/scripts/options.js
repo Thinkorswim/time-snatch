@@ -77,6 +77,7 @@ $(function(){
   });
 
   $(document).on('click', '.updateButton', function(){
+    $("th").css("min-width", "0px");
     var blockId = parseInt($(this).attr('id').substr(11));
     var timeDifference = parseInt($('#blockRow'+blockId).attr("data-time-left"));
 
@@ -85,6 +86,9 @@ $(function(){
       var blockTime = parseInt($('#blockRow'+blockId +' td:eq("1")').text().slice(0, -8));
       var blockRedirect = $('#blockRow'+blockId +' td:eq("3")').text();
       var blockIncognito = $('#blockRow'+ blockId +' td:eq("4")').text();
+
+      var ts = $('#blockRow'+ blockId +' td:eq("5")').text();
+      var te = $('#blockRow'+ blockId +' td:eq("6")').text();
 
       if( blockIncognito == "true"){
         blockIncognito = "checked";
@@ -101,6 +105,19 @@ $(function(){
         updateRow += '<td id="redirectRow"><input type="text" value="' + blockRedirect + '" placeholder="Optional"></td>';
       }
       updateRow += '<td id="incognitoRow"><label class="container2"><input type="checkbox" id="blockIncognito" ' + blockIncognito + '><span class="checkmark2"></span></label></td>';
+
+      if (ts.trim() == "--:--"){
+        updateRow += '<td id="stRow"><input type="time" id="start_time" name="start_time"></td>';
+      } else {
+        updateRow += '<td id="stRow"><input type="time" id="start_time" name="start_time" value="' + ts.trim() +'" ></td>';
+      }
+
+      if (te.trim() == "--:--"){
+        updateRow += '<td id="etRow"><input type="time" id="end_time" name="end_time"></td>';
+      } else {
+        updateRow += '<td id="etRow"><input type="time" id="end_time" name="end_time" value="' + te.trim() +'" ></td>';
+      }
+
       updateRow += '<td class="cUpdate">';
       updateRow += '<button style="background-color: #e74c3c; border-color:#e74c3c!important;" id="deleteButton' + blockId + '" class="optionsButton deleteButton"><img src="../images/garbage.png"></button>';
       updateRow += '<button style="background-color: #27ae60; border-color:#27ae60!important;" id="saveButton' + blockId + '" class="optionsButton saveButton"><img src="../images/save.png"></button>';
@@ -119,9 +136,50 @@ $(function(){
     var blockTime = parseInt($('#blockRow'+blockId +' td:eq("1") input:eq("0")').val());
     var blockRedirect = $('#blockRow'+blockId +' td:eq("3") input:eq("0")').val();
     var blockIncognito = $('#blockRow'+blockId +' td:eq("4") input:eq("0")').is(':checked');
+    var st = $('#blockRow'+blockId +' td:eq("5") input:eq("0")').val();
+    var et = $('#blockRow'+blockId +' td:eq("6") input:eq("0")').val();
 
     chrome.storage.sync.get('blockList', function(data){
         var blockList = data.blockList;
+
+        if (st != "" || et != ""){
+          hs = parseInt(st.split(":")[0]);
+          ms = parseInt(st.split(":")[1]);
+
+          he = parseInt(et.split(":")[0]);
+          me = parseInt(et.split(":")[1]);
+
+          if (hs <= he) {
+            if (hs == he) {
+              if (ms < me) {
+                blockList[blockId].hs = hs;
+                blockList[blockId].ms = ms;
+                blockList[blockId].he = he;
+                blockList[blockId].me = me;
+              } else {
+                delete blockList[blockId].hs;
+                delete blockList[blockId].ms;
+                delete blockList[blockId].he;
+                delete blockList[blockId].me;
+              }
+            } else {
+              blockList[blockId].hs = hs;
+              blockList[blockId].ms = ms;
+              blockList[blockId].he = he;
+              blockList[blockId].me = me;
+            }
+          } else {
+            delete blockList[blockId].hs;
+            delete blockList[blockId].ms;
+            delete blockList[blockId].he;
+            delete blockList[blockId].me;
+          }
+        } else {
+          delete blockList[blockId].hs;
+          delete blockList[blockId].ms;
+          delete blockList[blockId].he;
+          delete blockList[blockId].me;
+        }
 
         blockList[blockId].url = blockUrl;
         if(blockRedirect == ''){
@@ -170,6 +228,8 @@ $(function(){
     blockedListSection += '<th> Time left </th>';
     blockedListSection += '<th> Redirect </th>';
     blockedListSection += '<th> Incognito </th>';
+    blockedListSection += '<th> Nuke start </th>';
+    blockedListSection += '<th> Nuke end </th>';
     blockedListSection += '<th class="cUpdate"> </th>';
     blockedListSection += '</tr></table></div>';
 
@@ -191,6 +251,14 @@ $(function(){
     rowAppend += '<td>' + timeLeft + "</td>";
     rowAppend += '<td>' + blockedWebsite.redirectUrl + "</td>";
     rowAppend += '<td id="incognitoRow">' + blockedWebsite.blockIncognito + "</td>";
+    if (blockedWebsite.hs != undefined && blockedWebsite.ms != undefined &&
+        blockedWebsite.he != undefined && blockedWebsite.me != undefined) {
+      rowAppend += '<td>' + ("0" + blockedWebsite.hs).slice(-2) + ":" + ("0" + blockedWebsite.ms).slice(-2) + "</td>";
+      rowAppend += '<td>' + ("0" + blockedWebsite.he).slice(-2) + ":" + ("0" + blockedWebsite.me).slice(-2) + "</td>";
+    } else {
+      rowAppend += '<td> --:-- </td>';
+      rowAppend += '<td> --:-- </td>';
+    }
     rowAppend += '<td class="cUpdate"> <button id="blockButton' + blockId + '" class="optionsButton updateButton">';
     rowAppend += '<img src="../images/edit.png">';
     rowAppend += '</button> </td>';
