@@ -11,10 +11,10 @@ chrome.runtime.onInstalled.addListener(function (object) {
     }
 });
 
-chrome.browserAction.setBadgeBackgroundColor({ color: "#e74c3c"});
-
 blockInterval = null;
 block = null;
+globalTimeBudget = null;
+globalTimeUsed = 0;
 
 chrome.tabs.onCreated.addListener(function(tab) {
   if(tab.active && tab.url){
@@ -46,18 +46,30 @@ chrome.windows.onFocusChanged.addListener(function(windowId){
   }
 });
 
+function checkGlobalBudget(redirectUrl, tabId) {
+  if (globalTimeBudget && globalTimeUsed >= globalTimeBudget) {
+    redirectTo(redirectUrl, tabId);
+  }
+}
+
 function checkBlocked(tab){
-  chrome.storage.sync.get('blockList', function(data){
+  chrome.storage.sync.get(['blockList', 'globalOptions'], function(data){
       if(typeof data.blockList !== 'undefined' && typeof data.blockList[0] !== 'undefined' && data.blockList[0].date != getDateFormat(new Date())){
         resetDayTimes();
+      }
+      if(data.globalOptions && data.globalOptions.budget) {
+        globalTimeBudget = data.globalOptions.budget * 60;
       }
 
       if(data.blockList && data.blockList.length){
         var blockList = data.blockList;
+        var sumOfTimes = 0;
+        var matchedSite = null;
         for(var i in blockList){
           var currentBlock = blockList[i];
+          sumOfTimes += currentBlock.timeDay;
           if (getDomain(tab.url) == currentBlock.url){
-
+            matchedSite = currentBlock;
             var today = new Date();
             var hc = parseInt(today.getHours());
             var mc = parseInt(today.getMinutes());
@@ -85,7 +97,7 @@ function checkBlocked(tab){
               }
             }
 
-            setBadge(getMinutesAndSeconds(currentBlock.timeDay, currentBlock.timeTotal));
+            setBadgeForTime(currentBlock.timeDay, currentBlock.timeTotal);
 
             if(currentBlock.timeDay >= currentBlock.timeTotal){
               setBadge('');
@@ -121,8 +133,11 @@ function checkBlocked(tab){
                 }
               }
             }
-            break;
           }
+        }
+        globalTimeUsed = sumOfTimes;
+        if (matchedSite && !(matchedSite.blockIncognito === false && tab.incognito === true)) {
+          checkGlobalBudget(matchedSite.redirectUrl, tab.id);
         }
       }
   });
@@ -136,30 +151,44 @@ function eventStart(){
   }
 }
 
+function triggerNotification(limit, time, url) {
+  var msg = url + " will be blocked";
+  if (globalTimeBudget && (globalTimeBudget - globalTimeUsed) <= (limit - time)) {
+    time = globalTimeUsed;
+    limit = globalTimeBudget;
+    msg = "Browsing will be limited";
+  }
+  if (limit - time === 300) {
+    createNotification("Time Snatch (5 minutes)", msg + " in 5 minutes! Enjoy while you still can!");
+  } else if (limit - time === 60) {
+    createNotification("Time Snatch (1 minute)", msg + " in 1 minute! Better wrap up your browsing!");
+  } else if (limit - time === 10) {
+    createNotification("Time Snatch (10 seconds)", msg + " in 10 seconds! Hurry up!");
+  }
+}
+
 function updateTime(){
   chrome.windows.getCurrent(function(browser){
     var popupOpen = chrome.extension.getViews({ type: "popup" }).length != 0;
 
     if(browser.focused || popupOpen){
       block.timeDay += 1;
-      setBadge(getMinutesAndSeconds(block.timeDay, block.timeTotal));
+      globalTimeUsed += 1;
+      setBadgeForTime(block.timeDay, block.timeTotal);
       chrome.runtime.sendMessage({
         type: "updateTime",
         listId: block.listId,
-        time: getMinutesAndSeconds(block.timeDay, block.timeTotal)
+        time: getMinutesAndSeconds(block.timeDay, block.timeTotal),
+        totalTime: globalTimeBudget ? getMinutesAndSeconds(globalTimeUsed, globalTimeBudget) : null
       });
 
-      if(block.timeTotal-block.timeDay == 300){
-        createNotification("Time Snatch (5 minutes)", block.url + " will be blocked in 5 minutes! Enjoy while you still can!");
-      }else if(block.timeTotal-block.timeDay == 60){
-        createNotification("Time Snatch (1 minute)", block.url + " will be blocked in 1 minute! Better wrap up your browsing!");
-      }else if(block.timeTotal-block.timeDay == 10){
-        createNotification("Time Snatch (10 seconds)", block.url + " will be blocked in 10 seconds! Hurry up!");
-      }
+      triggerNotification(block.timeTotal, block.timeDay, block.url);
 
       if(block.timeDay >= block.timeTotal){
         setBadge('');
         redirectTo(block.redirectUrl, block.tabId);
+      } else {
+        checkGlobalBudget(block.redirectUrl, block.tabId)
       }
     }
   });
@@ -222,6 +251,7 @@ function resetDayTimes(){
   if(block != null){
     block.timeDay = 0;
   }
+  globalTimeUsed = 0;
   chrome.storage.sync.get('blockList', function(data){
       data.blockList[0].date = getDateFormat(new Date());
 
@@ -236,11 +266,25 @@ function resetDayTimes(){
   });
 }
 
-function setBadge(text){
+function setBadge(text, globalLimit = false){
+  chrome.browserAction.setBadgeBackgroundColor({ color: (globalLimit ? "#e74c3c" : "#e79c3c")});
   chrome.browserAction.setBadgeText({"text": text});
 }
 
+function setBadgeForTime(time, limit) {
+  var global = false;
+  if (globalTimeBudget && (globalTimeBudget - globalTimeUsed) <= (limit - time)) {
+    time = globalTimeUsed;
+    limit = globalTimeBudget;
+    global = true;
+  }
+  setBadge(getMinutesAndSeconds(time, limit), global);
+}
+
 function getMinutesAndSeconds(day, total){
+  if (day >= total ) {
+    return "0:00";
+  }
   var minutes = (Math.floor((total-day) / 60)).toString();
   var seconds = ((total - day) % 60);
   if(seconds < 10){

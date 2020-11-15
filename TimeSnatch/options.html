@@ -15,9 +15,17 @@
 
     <div class="body">
 
+      <div class="section"> Global time budget </div>
+      <form id="globalForm" autocomplete="off" class="blockForm">
+        <label for="globalTimeBudget">Allow </label>
+        <input type="number" placeholder="unlimited" id="globalTimeBudget"> minutes per day (Optional)<span id="globalTimeBudgetLeft"></span>
+        <br>
+        <input type="submit" class="optionsButton" id="globalFormButton" value="Save">
+      </form>
+
       <div class="section"> Block a website </div>
 
-      <form id="blockForm" autocomplete="off">
+      <form id="blockForm" autocomplete="off" class="blockForm">
         <label for="blockName">Block </label>
         <input type="text" placeholder="example.com" id="blockName" autofocus required>
         <br>

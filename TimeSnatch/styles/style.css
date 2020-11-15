@@ -194,6 +194,10 @@ td{
   width:20px;
 }
 
+.pGlobalBudgetRow{
+  border-bottom: 1px solid #2980b9;
+}
+
 .cUpdate .optionsButton{
   padding: 5px;
   float: right;
@@ -244,20 +248,20 @@ td input{
   margin-top: 30px;
 }
 
-#blockForm{
+.blockForm{
   padding-left: 10px;
   margin-bottom: 40px;
   margin-top: 35px;
 }
 
-#blockForm input{
+.blockForm input{
   margin: 7px;
   font-size: 18px;
   border: 1px solid #ccc;
   padding: 6px;
 }
 
-#blockForm input.optionsButton{
+.blockForm input.optionsButton{
   padding: 10px 23px;
 }
 

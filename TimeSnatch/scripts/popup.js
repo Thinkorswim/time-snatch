@@ -16,6 +16,9 @@ $(function(){
 
     if(request.type == "updateTime"){
       $("#blocked" + request.listId + ' td:eq("1")').html(request.time);
+      if (request.totalTime) {
+          $("#blockedglobal" + ' td:eq("1")').html(request.totalTime);
+      }
     }else if(request.type == "bold"){
       $("#blocked" + request.listId).css('font-weight', '500');
       $("#blocked" + request.listId).css('color', '#2980b9');
@@ -49,13 +52,15 @@ $(function(){
 
 
   function listBlockedWebsites(){
-    chrome.storage.sync.get('blockList', function(data){
+    chrome.storage.sync.get(['blockList', 'globalOptions'], function(data){
         if(data.blockList && data.blockList.length){
           var blockList = data.blockList;
           $("#popupList table").html('');
+          var totalTime = 0;
 
           for (var i in blockList) {
               var timeLeft = getMinutesAndSeconds(blockList[i].timeDay, blockList[i].timeTotal);
+              totalTime += blockList[i].timeDay;
               var minutes = Math.floor((blockList[i].timeTotal-blockList[i].timeDay) / 60);
               var seconds = (blockList[i].timeTotal-blockList[i].timeDay) % 60;
 
@@ -70,6 +75,14 @@ $(function(){
 
               $("#popupList table").append(popupRow);
           }
+          if(data.globalOptions && data.globalOptions.budget){
+              var globalTimeLeft = getMinutesAndSeconds(totalTime, data.globalOptions.budget*60);
+              var globalPopupRow = '<tr id="blockedglobal" class="pGlobalBudgetRow">';
+              globalPopupRow += '<td class="pBlocked">Global</td>';
+              globalPopupRow += '<td class="pTime">' + globalTimeLeft + '</td>';
+              globalPopupRow += "</tr>";
+              $("#popupList table").prepend(globalPopupRow);
+          }
         }else{
           var apopupRow = '<td class="noBlocked"> No blocked websites :( </td>';
           $("#popupList table").append(apopupRow);
@@ -78,6 +91,9 @@ $(function(){
   }
 
   function getMinutesAndSeconds(day, total){
+    if (day >= total ) {
+        return "0:00";
+    }
     var minutes = (Math.floor((total-day) / 60)).toString();
     var seconds = ((total - day) % 60);
     if(seconds < 10){

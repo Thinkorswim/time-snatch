@@ -2,7 +2,8 @@ $(function(){
 
 
   // On Load
-  chrome.storage.sync.get('blockList', function(data){
+  chrome.storage.sync.get(['blockList', 'globalOptions'], function(data){
+      var totalTimeUsed = 0;
       if(data.blockList && data.blockList.length){
         createBlockedListSection();
 
@@ -10,7 +11,16 @@ $(function(){
 
         for (var i in blockList) {
           addBlockedRow(blockList[i], i);
+          totalTimeUsed += blockList[i].timeDay;
         }
+      }
+      if(data.globalOptions){
+          var budget = data.globalOptions.budget;
+          $("#globalTimeBudget").val(budget || "");
+          if(budget){
+              var timeLeft = budget*60 > totalTimeUsed ? getMinutesAndSeconds(totalTimeUsed, budget*60) : "None";
+              $("#globalTimeBudgetLeft").text(" [time left: "+timeLeft+"]");
+          }
       }
   });
 
@@ -214,9 +224,22 @@ $(function(){
 
   });
 
+  $("#globalFormButton").click(function(){
+    var globalTimeBudgetInputString = $("#globalTimeBudget").val();
+    var globalTimeBudgetInput = parseInt(globalTimeBudgetInputString);
+    var globalOptions = {
+      budget: globalTimeBudgetInputString === '' || isNaN(globalTimeBudgetInput) ? null : globalTimeBudgetInput
+    };
+    chrome.storage.sync.set({'globalOptions': globalOptions}, function(){
+      location.reload();
+    });
+  });
 
   // Tweaks
   $('#blockForm').submit(function () {
+   return false;
+  });
+  $('#globalForm').submit(function () {
    return false;
   });
 
