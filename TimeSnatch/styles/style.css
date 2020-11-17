@@ -195,7 +195,12 @@ td{
 }
 
 .pGlobalBudgetRow{
-  border-bottom: 1px solid #2980b9;
+  border-bottom: 1px solid #333333;
+  font-weight: bolder;
+}
+
+.pGlobalBudgetRow > td{
+  padding: 6px 14px!important;
 }
 
 .cUpdate .optionsButton{
@@ -233,11 +238,11 @@ td input{
 
 #popupList table{
   width: 100%;
-  margin: 7px 0px 10px 0px;
+  /* margin: 7px 0px 10px 0px; */
 }
 
 #popupList td{
-  padding: 6px 14px;
+  padding: 9px 14px;
   font-size: 15px;
   min-width: unset;
 }
@@ -246,6 +251,19 @@ td input{
   padding-left: 20px;
   margin-bottom: 40px;
   margin-top: 30px;
+}
+
+#globalForm{
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+#globalTimeBudgetLeft{
+  margin-left: 10px;
+}
+
+#globalFormButton{
+  margin-left: 15px;
 }
 
 .blockForm{

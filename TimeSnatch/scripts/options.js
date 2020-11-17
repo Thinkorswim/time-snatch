@@ -19,7 +19,7 @@ $(function(){
           $("#globalTimeBudget").val(budget || "");
           if(budget){
               var timeLeft = budget*60 > totalTimeUsed ? getMinutesAndSeconds(totalTimeUsed, budget*60) : "None";
-              $("#globalTimeBudgetLeft").text(" [time left: "+timeLeft+"]");
+              $("#globalTimeBudgetLeft").text(" [Time left: "+timeLeft+"]");
           }
       }
   });
