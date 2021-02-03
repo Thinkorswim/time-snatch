@@ -2,6 +2,8 @@
 
 ## Block websites, control your browsing patterns and beat procrastination. ##
 
+![time snatch](https://lh3.googleusercontent.com/Ezs9J-yK7mLvfDKVcBkiJZ4QfrSrN1o6lBXMlYnIOWxfTCUC_gGee8FGXChXwjgJw5wIcFEPgJl1G7KHLiWrH3xJWI4=w640-h400-e365-rj-sc0x00ffffff)
+
 Time Snatch boosts your productivity by allowing you to limit the amount of time you spend on distracting websites.
 
 You can completely block off a website or allow yourself to enjoy it for a few minutes (or hours) per day. After navigating to a distracting site you will be redirected to a productive one of your choice or to our default inspiring web page that will throw motivating quotes at you.
