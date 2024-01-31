@@ -168,19 +168,22 @@ function triggerNotification(limit, time, url) {
 }
 
 function updateTime(){
-  chrome.windows.getCurrent(function(browser){
-    var popupOpen = chrome.extension.getViews({ type: "popup" }).length != 0;
+  chrome.windows.getCurrent(async function(browser){
+    const popupOpen = (await chrome.runtime.getContexts({ contextTypes: ["POPUP"] })).length > 0;
 
     if(browser.focused || popupOpen){
       block.timeDay += 1;
       globalTimeUsed += 1;
       setBadgeForTime(block.timeDay, block.timeTotal);
-      chrome.runtime.sendMessage({
-        type: "updateTime",
-        listId: block.listId,
-        time: getMinutesAndSeconds(block.timeDay, block.timeTotal),
-        totalTime: globalTimeBudget ? getMinutesAndSeconds(globalTimeUsed, globalTimeBudget) : null
-      });
+      
+      if(popupOpen){
+        chrome.runtime.sendMessage({
+          type: "updateTime",
+          listId: block.listId,
+          time: getMinutesAndSeconds(block.timeDay, block.timeTotal),
+          totalTime: globalTimeBudget ? getMinutesAndSeconds(globalTimeUsed, globalTimeBudget) : null
+        });
+      }
 
       triggerNotification(block.timeTotal, block.timeDay, block.url);
 
@@ -241,9 +244,13 @@ function syncBlockedData(){
 
 function redirectTo(url, tabId){
   if(url == "default"){
-    chrome.tabs.update(tabId, {"url" : chrome.extension.getURL('default.html')}, function () {});
+    chrome.tabs.update(tabId, {"url" : chrome.runtime.getURL('default.html')}, function () {});
   }else{
-    chrome.tabs.update(tabId, {"url" : 'http://' + url}, function () {});
+    if (url.includes("https://") || url.includes("http://")) {
+      chrome.tabs.update(tabId, {"url" : url}, function () {});
+    } else {
+      chrome.tabs.update(tabId, {"url" : 'https://' + url}, function () {});
+    }
   }
 }
 
@@ -267,8 +274,8 @@ function resetDayTimes(){
 }
 
 function setBadge(text, globalLimit = false){
-  chrome.browserAction.setBadgeBackgroundColor({ color: (globalLimit ? "#e74c3c" : "#e79c3c")});
-  chrome.browserAction.setBadgeText({"text": text});
+  chrome.action.setBadgeBackgroundColor({ color: (globalLimit ? "#e74c3c" : "#e79c3c")});
+  chrome.action.setBadgeText({"text": text});
 }
 
 function setBadgeForTime(time, limit) {
