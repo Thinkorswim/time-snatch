@@ -34,6 +34,7 @@ git clone https://github.com/Thinkorswim/time-snatch.git
 3. Install dependencies 
 
 ```
+cd time-snatch/TimeSnatch
 npm install
 ```
 
