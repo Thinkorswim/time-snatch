@@ -1,0 +1,131 @@
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+export const validateURL = (url: string) => {
+  try {
+    // Add `http://` if the protocol is missing
+    const normalizedUrl = url.startsWith('http://') || url.startsWith('https://')
+      ? url
+      : `https://${url}`;
+
+    const parsedUrl = new URL(normalizedUrl);
+
+    return /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(parsedUrl.hostname);
+  } catch (error) {
+    return false;
+  }
+};
+
+export const extractHostnameAndDomain = (url: string) => {
+  try {
+    const normalizedUrl = url.startsWith('http://') || url.startsWith('https://')
+      ? url
+      : `https://${url}`;
+
+    const { hostname } = new URL(normalizedUrl); // Extract the hostname
+    const parts = hostname.split('.');
+    if (parts.length > 2) {
+      // Remove subdomains, keeping only the domain and extension
+      return parts.slice(-2).join('.');
+    }
+    return hostname;
+  } catch (error) {
+    return null;
+  }
+};
+
+export function convertSecondsToHoursMinutes(seconds: number): { hours: number; minutes: number } {
+  if (seconds < 0) return { hours: 0, minutes: 0 };
+
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  return { hours, minutes };
+}
+
+export function convertSecondsToHoursMinutesSeconds(seconds: number): { hours: number; minutes: number; seconds: number } {
+  if (seconds < 0) return { hours: 0, minutes: 0, seconds: 0 };
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+
+  return { hours, minutes, seconds: remainingSeconds };
+}
+
+export function convertMinutesToMinutesHours(minutes: number): { hours: number; minutes: number } {
+  if (minutes < 0) return { hours: 0, minutes: 0 };
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  return { hours, minutes: remainingMinutes };
+}
+
+export const timeDisplayFormatBadge = (time: number) => {
+  const { hours, minutes, seconds } = convertSecondsToHoursMinutesSeconds(time)
+  let timeString = ""
+
+  if (hours > 0) {
+    timeString += `${hours}:` + `${minutes}`.padStart(2, '0')
+  } else {
+    timeString += `${minutes}` + ":" + `${seconds}`.padStart(2, '0')
+  }
+
+  return timeString
+}
+
+export const timeDisplayFormat = (time: number) => {
+  if (time <= 0) return "Blocked"
+
+  const { hours, minutes, seconds } = convertSecondsToHoursMinutesSeconds(time)
+  let timeString = ""
+
+
+  if (hours > 0) {
+    timeString += `${hours}:` + `${minutes}`.padStart(2, '0') + ":"
+  } else {
+    timeString += `${minutes}` + ":"
+  }
+
+  timeString += `${seconds}`.padStart(2, '0')
+
+  return timeString
+}
+
+
+export const scheduledBlockDisplay = (range: { start: number, end: number }) => {
+        
+  const { hours: startHours, minutes: startMinutes } = convertMinutesToMinutesHours(range.start)
+  const { hours: endHours, minutes: endMinutes } = convertMinutesToMinutesHours(range.end)
+
+  return `${startHours}`.padStart(2, '0') + ":" + `${startMinutes}`.padStart(2, '0') + " - " + `${endHours}`.padStart(2, '0') + ":" + `${endMinutes}`.padStart(2, '0')
+}
+
+export function updateObjectKeyAndData<T>(
+  obj: Record<string, T>,
+  targetKey: string,
+  newKey: string,
+  newData: T
+): Record<string, T> {
+  const newObject: Record<string, T> = {};
+
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      if (key === targetKey) {
+        // Replace the target key and data
+        newObject[newKey] = newData;
+      } else {
+        // Copy other keys and values as is
+        newObject[key] = obj[key];
+      }
+    }
+  }
+
+  return newObject;
+}

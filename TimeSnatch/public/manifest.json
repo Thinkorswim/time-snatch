@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Time Snatch - Block Websites with Timers",
+  "short_name": "Time Snatch",
+  "version": "3.0.0",
+  "description": "Time restrict websites, block websites, control your browsing patterns and beat procrastination.",
+  "icons": {
+    "128": "images/logo128.png",
+    "64": "images/logo64.png",
+    "48": "images/logo48.png",
+    "16": "images/logo16.png"
+  },
+  "action": {
+    "default_icon": "images/logo128.png",
+    "default_popup": "src/popup/popup.html"
+  },
+  "options_page": "src/options/options.html",
+  "background": {
+    "service_worker": "src/scripts/controller.js",
+    "type": "module"
+  },
+  "permissions": [
+    "storage",
+    "alarms",
+    "tabs",
+    "windows"
+  ]
+}
