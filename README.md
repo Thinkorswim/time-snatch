@@ -14,7 +14,7 @@ The "Read your browsing history" permission is needed to check whether the curre
 
 ## Install from source
 
-1. Download the latest .zip file version from ```https://github.com/Thinkorswim/time-snatch/releases/tag/release```
+1. Download the latest .zip file version from `https://github.com/Thinkorswim/time-snatch/releases/tag/release`
 2. Unzip the file and you should have a folder `time-snatch`
 3. Move the folder to a permanent location on your computer (do not delete the folder after installation).
 4. Go to the extensions page: chrome://extensions
@@ -27,14 +27,20 @@ The "Read your browsing history" permission is needed to check whether the curre
 1. Download and install Node.js from the [official website](https://nodejs.org/).
 2. Clone the repository 
 
-```git clone https://github.com/Thinkorswim/time-snatch.git``` 
+```
+git clone https://github.com/Thinkorswim/time-snatch.git
+``` 
 
 3. Install dependencies 
 
-```npm install```
+```
+npm install
+```
 
 4. Create a build
 
-```npm run build```
+```
+npm run build
+```
 
 5. This creates a `dist` folder which can be loaded unpacked into your browser extensions. Local (hot reloading) development is not available because of the reliance on the chrome sync API.
