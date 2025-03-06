@@ -162,6 +162,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
 
         chrome.storage.local.get("blockedWebsitesList", (data) => {
             const currentList = data.blockedWebsitesList || {};
+            const realUrl = extractHostnameAndDomain(websiteValue)!;
 
             let updatedList = {};
 
@@ -175,7 +176,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
             } else {
                 updatedList = {
                     ...currentList,
-                    [websiteValue]: blockedWebsite.toJSON(),
+                    [realUrl]: blockedWebsite.toJSON(),
                 };    
             }
 

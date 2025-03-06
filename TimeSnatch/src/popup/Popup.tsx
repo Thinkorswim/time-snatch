@@ -22,6 +22,8 @@ function Popup() {
   const [activeTab, setActiveTab] = useState('blockedWebsites');
 
   useEffect(() => {
+    chrome.runtime.connect();
+    
     // Retrieve the list of blocked websites from storage
     chrome.storage.local.get(["blockedWebsitesList", "globalTimeBudget"], (data) => {
       if (data.blockedWebsitesList) {
@@ -51,10 +53,7 @@ function Popup() {
         setGlobalTimeBudget(GlobalTimeBudget.fromJSON(data.globalTimeBudget));
       }
     });
-
-
   }, []);
-
 
   return (
     <div className='w-full font-geist'>

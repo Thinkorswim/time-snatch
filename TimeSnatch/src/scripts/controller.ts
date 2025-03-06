@@ -10,7 +10,6 @@ chrome.runtime.onInstalled.addListener((object) => {
     chrome.storage.local.get(['blockedWebsitesList', 'globalTimeBudget'], (data) => {
         if (!data.blockedWebsitesList) {
             chrome.storage.local.set({ blockedWebsitesList: {} });
-            chrome.storage.sync.set({ blockedWebsitesList: {} });
         }
 
         if (!data.globalTimeBudget) {
@@ -24,7 +23,6 @@ chrome.runtime.onInstalled.addListener((object) => {
             );
 
             chrome.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() });
-            chrome.storage.sync.set({ globalTimeBudget: globalTimeBudget.toJSON() });
         }
 
         if (object.reason === 'update') {
@@ -61,9 +59,25 @@ chrome.runtime.onInstalled.addListener((object) => {
     
                     chrome.storage.sync.remove(['blockList']);
                     chrome.storage.local.set({ blockedWebsitesList: newBlockedList });
-                    chrome.storage.sync.set({ blockedWebsitesList: newBlockedList });
                 }
             });
+
+            // Loop through all the blocked websites and change the key
+            chrome.storage.local.get(['blockedWebsitesList'], (data) => {
+                const blockedWebsitesList = data.blockedWebsitesList;
+                if (!blockedWebsitesList) return;
+
+                const newBlockedWebsitesList: { [key: string]: BlockedWebsite } = {};
+
+                for (const website in blockedWebsitesList) {
+                    if (blockedWebsitesList.hasOwnProperty(website)) {
+                        newBlockedWebsitesList[extractHostnameAndDomain(website)!] = blockedWebsitesList[website];
+                    }
+                }
+
+                chrome.storage.local.set({ blockedWebsitesList: newBlockedWebsitesList });
+            });
+
         }
     });
 });
@@ -75,21 +89,6 @@ setInterval(() => {
         }
     });
 }, 1000);
-
-chrome.runtime.onStartup.addListener(() => {
-    chrome.storage.sync.get(['blockedWebsitesList', 'globalTimeBudget'], (data) => {
-        chrome.storage.local.set({ blockedWebsitesList: data.blockedWebsitesList || {}, globalTimeBudget: GlobalTimeBudget.fromJSON(data.globalTimeBudget).toJSON() });
-    });
-
-    chrome.alarms.create("syncData", { periodInMinutes: 0.5 }); // 30 seconds
-});
-
-
-chrome.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === "syncData") {
-        syncData();
-    }
-});
 
 let activeBlockTimer: NodeJS.Timeout | null = null;
 
@@ -122,6 +121,19 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
     }
 });
 
+
+chrome.runtime.onConnect.addListener((port) => {
+    stopCurrentBlocking(); // Stop blocking while popup is open
+
+    port.onDisconnect.addListener(() => {
+        // Check active tab when popup closes
+        chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
+            if (tabs.length > 0 && tabs[0].url) {
+                debounceCheckUrlBlockStatus(tabs[0]);
+            }
+        });
+    });
+});
 
 const stopCurrentBlocking = () => {
     if (activeBlockTimer != null) {
@@ -294,7 +306,7 @@ const resetDailyTimers = (blockedWebsites: Record<string, BlockedWebsite>) => {
 
 
 const storeData = (websiteName: string, totalTime: number) => {
-    chrome.storage.sync.get(['blockedWebsitesList'], (data) => {
+    chrome.storage.local.get(['blockedWebsitesList'], (data) => {
         if (!data.blockedWebsitesList || typeof data.blockedWebsitesList !== 'object') return;
         let blockedWebsitesList = data.blockedWebsitesList
 
@@ -305,7 +317,7 @@ const storeData = (websiteName: string, totalTime: number) => {
 }
 
 const storeGlobalData = (totalTime: number) => {
-    chrome.storage.sync.get(['globalTimeBudget'], (data) => {
+    chrome.storage.local.get(['globalTimeBudget'], (data) => {
         if (!data.globalTimeBudget || typeof data.globalTimeBudget !== 'object') return;
 
         let globalTimeBudget = GlobalTimeBudget.fromJSON(data.globalTimeBudget);
@@ -316,19 +328,7 @@ const storeGlobalData = (totalTime: number) => {
     });
 }
 
-// Transfer data from local storage to Google storage
-const syncData = () => {
-    chrome.storage.local.get(['blockedWebsitesList', 'globalTimeBudget'], (data) => {
-        chrome.storage.sync.set({ blockedWebsitesList: data.blockedWebsitesList, globalTimeBudget: GlobalTimeBudget.fromJSON(data.globalTimeBudget).toJSON() });
-    });
-}
-
 const setBadge = (text: string) => {
     chrome.action.setBadgeBackgroundColor({ color: "#ae0f0f" });
     chrome.action.setBadgeText({ text });
 }
-
-// Sync data on closing a window to ensure consistency
-chrome.windows.onRemoved.addListener(() => {
-    syncData()
-});
