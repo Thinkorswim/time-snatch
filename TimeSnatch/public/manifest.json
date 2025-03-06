@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Time Snatch - Block Websites with Timers",
   "short_name": "Time Snatch",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Time restrict websites, block websites, control your browsing patterns and beat procrastination.",
   "icons": {
     "128": "images/logo128.png",
@@ -21,7 +21,6 @@
   },
   "permissions": [
     "storage",
-    "alarms",
     "tabs",
     "windows"
   ]
