@@ -1,6 +1,4 @@
-# Time Sntach 
-
-## Time restrict websites, block websites, control your browsing patterns and beat procrastination
+# Time Sntach - Time restrict websites, block websites and control your browsing patterns
 
 ![time snatch](Design/marketplace/marquee.jpg)
 
@@ -14,7 +12,7 @@ The "Read your browsing history" permission is needed to check whether the curre
 
 ## Install from source
 
-1. Download the latest .zip file version from `https://github.com/Thinkorswim/time-snatch/releases/tag/release`
+1. Download the latest .zip file version from [https://github.com/Thinkorswim/time-snatch/releases/tag/release](https://github.com/Thinkorswim/time-snatch/releases/tag/release)
 2. Unzip the file and you should have a folder `time-snatch`
 3. Move the folder to a permanent location on your computer (do not delete the folder after installation).
 4. Go to the extensions page: chrome://extensions
