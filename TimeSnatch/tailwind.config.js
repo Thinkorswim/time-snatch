@@ -9,7 +9,7 @@ export default {
 		extend: {
 			fontFamily: {
 				geist: ["Geist", "sans-serif"],
-				geistMono: ["GeistMono", "monospace"],
+				geistmono: ["GeistMono", "monospace"],
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

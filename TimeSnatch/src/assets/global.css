@@ -1,6 +1,7 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.js";
+
+@plugin 'tailwindcss-animate';
 
 /* Daylight */
 @layer base {
@@ -61,19 +62,30 @@
     }
 }
 
+@layer base {
+    button:not([disabled]),
+    [role="button"]:not([disabled]) {
+        cursor: pointer;
+    }
+}
+
 @font-face {
     font-family: 'Geist';
     src: url('/fonts/Geist.woff2') format('woff2');
-    font-weight: 100 900; /* Supports a range from 100 to 900 */
-    font-stretch: 75% 125%; /* Optional: Adjusts width if supported */
+    font-weight: 100 900;
+    /* Supports a range from 100 to 900 */
+    font-stretch: 75% 125%;
+    /* Optional: Adjusts width if supported */
     font-style: normal;
 }
 
 @font-face {
     font-family: 'GeistMono';
     src: url('/fonts/GeistMono.woff2') format('woff2');
-    font-weight: 100 900; /* Supports a range from 100 to 900 */
-    font-stretch: 75% 125%; /* Optional: Adjusts width if supported */
+    font-weight: 100 900;
+    /* Supports a range from 100 to 900 */
+    font-stretch: 75% 125%;
+    /* Optional: Adjusts width if supported */
     font-style: normal;
 }
 

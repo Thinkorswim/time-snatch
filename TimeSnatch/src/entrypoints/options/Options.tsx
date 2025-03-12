@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
-import './options.css'
-import '../styles/global.css'
-import { createRoot } from 'react-dom/client'
-import { BlockedWebsite } from "@/lib/BlockedWebsite"
+import './style.css';
+import '~/assets/global.css';
+import { BlockedWebsite } from "@/models/BlockedWebsite"
 import { BlockedWebsiteForm } from "@/components/custom/BlockedWebsiteForm"
 import { BlockedWebsitesTable } from '@/components/custom/BlockedWebsitesTable'
 import { GlobalTimeBudgetTable } from '@/components/custom/GlobalTimeBudgetTable'
@@ -25,7 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { GlobalTimeBudget } from '@/lib/GlobalTimeBudget'
+import { GlobalTimeBudget } from '@/models/GlobalTimeBudget'
 import { timeDisplayFormat, scheduledBlockDisplay } from '@/lib/utils'
 import { GlobalTimeBudgetWebsiteForm } from '@/components/custom/GlobalTimeBudgetWebsiteForm'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -368,6 +367,4 @@ function Options() {
   )
 }
 
-createRoot(document.getElementById('options-root')!).render(
-  <Options />
-)
+export default Options;

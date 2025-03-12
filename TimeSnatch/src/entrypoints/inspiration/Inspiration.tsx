@@ -1,8 +1,7 @@
-import './inspiration.css'
-import '../styles/global.css'
-import { createRoot } from 'react-dom/client'
-import { useTypewriter } from 'react-simple-typewriter'
 import { useState, useEffect } from 'react'
+import './style.css';
+import '~/assets/global.css';
+import { useTypewriter } from 'react-simple-typewriter'
 import { quotes } from './quotes'
 
 
@@ -34,9 +33,8 @@ function Inspiration() {
   });
 
 
-
   return (
-    <div className="flex h-screen items-center justify-start max-w-screen-lg mx-auto font-geistMono text-4xl text-muted-foreground font-light">
+    <div className="flex h-screen items-center justify-start max-w-screen-lg mx-auto font-geistmono text-4xl text-muted-foreground font-light">
       <div className="flex flex-col items-center">
         {quote}
         {showAuthor && (
@@ -49,4 +47,4 @@ function Inspiration() {
   );
 }
 
-createRoot(document.getElementById('inspiration-root')!).render(<Inspiration />);
+export default Inspiration;

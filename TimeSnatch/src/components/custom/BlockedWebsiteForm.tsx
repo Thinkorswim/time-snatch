@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Info } from "lucide-react";
 import { Button } from '@/components/ui/button';
-import { BlockedWebsite } from '@/lib/BlockedWebsite';
+import { BlockedWebsite } from '@/models/BlockedWebsite';
 import { validateURL, extractHostnameAndDomain, updateObjectKeyAndData } from '@/lib/utils';
 import { RoundSlider, ISettingsPointer } from 'mz-react-round-slider';
 

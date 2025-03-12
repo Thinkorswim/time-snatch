@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react'
-import './popup.css'
-import '../styles/global.css'
-import { Progress } from "@/components/ui/progress"
-import { createRoot } from 'react-dom/client'
-import { BlockedWebsite } from '@/lib/BlockedWebsite'
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Cog, ShieldBan, Component} from 'lucide-react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { GlobalTimeBudget } from '@/lib/GlobalTimeBudget'
-import { ProgressGlobal } from '@/components/ui/progress-global'
+import './style.css';
+import '~/assets/global.css';
+import { BlockedWebsite } from '@/models/BlockedWebsite'
+import { GlobalTimeBudget } from '@/models/GlobalTimeBudget'
 import { extractHostnameAndDomain } from '@/lib/utils'
+import { Progress } from "@/components/ui/progress"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ProgressGlobal } from '@/components/ui/progress-global'
+import { Cog, ShieldBan, Component} from 'lucide-react'
+import { storage } from 'wxt/storage';
+
 
 function Popup() {
 
@@ -114,10 +115,8 @@ function Popup() {
 
       </Tabs>
 
-    </div >
+    </div>
   )
 }
 
-createRoot(document.getElementById('popup-root')!).render(
-  <Popup />
-)
+export default Popup;

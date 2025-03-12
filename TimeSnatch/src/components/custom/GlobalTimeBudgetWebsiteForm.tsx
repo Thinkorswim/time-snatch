@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Info } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { validateURL, extractHostnameAndDomain } from '@/lib/utils';
-import { GlobalTimeBudget } from '@/lib/GlobalTimeBudget';
+import { GlobalTimeBudget } from '@/models/GlobalTimeBudget';
 
 interface GlobalTimeBudgetWebsiteFormProps {
     callback?: () => void; // Generic optional callback

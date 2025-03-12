@@ -1,5 +1,5 @@
 import { scheduledBlockDisplay, timeDisplayFormat } from "@/lib/utils"
-import { BlockedWebsite } from '@/lib/BlockedWebsite';
+import { BlockedWebsite } from '@/models/BlockedWebsite';
 import {
     Table,
     TableBody,

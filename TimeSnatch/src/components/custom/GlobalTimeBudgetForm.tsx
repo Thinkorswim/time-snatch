@@ -7,7 +7,7 @@ import { Info } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { validateURL } from '@/lib/utils';
 import { RoundSlider, ISettingsPointer } from 'mz-react-round-slider';
-import { GlobalTimeBudget } from '@/lib/GlobalTimeBudget';
+import { GlobalTimeBudget } from '@/models/GlobalTimeBudget';
 
 interface GlobalTimeBudgetFormProps {
     callback?: () => void; // Generic optional callback
