@@ -10,7 +10,7 @@ Time Snatch is lightweight, reliable and secure. It gives you the flexibility to
 
 The "Read your browsing history" permission is needed to check whether the current website you are visiting matches any of the ones you have blocked. The extension never saves, sends or uses any of this information for other purposes.
 
-## Install from source
+## Install locally
 
 1. Download the latest .zip file version from [https://github.com/Thinkorswim/time-snatch/releases/tag/release](https://github.com/Thinkorswim/time-snatch/releases/tag/release)
 2. Unzip the file and you should have a folder `time-snatch`
@@ -21,6 +21,8 @@ The "Read your browsing history" permission is needed to check whether the curre
 
 
 ## Developer setup
+
+The project has gone through multiple iterations and is now developed based on the [WXT Framework](https://wxt.dev/) with Vite and React. To start development or build from source follow the steps below:
 
 1. Download and install Node.js from the [official website](https://nodejs.org/).
 2. Clone the repository 
@@ -36,10 +38,16 @@ cd time-snatch/TimeSnatch
 npm install
 ```
 
-4. Create a build
+4. Run the project
+
+```
+npm run dev
+```
+
+5. (Optional) Create a build from source
 
 ```
 npm run build
 ```
 
-5. This creates a `dist` folder which can be loaded unpacked into your browser extensions. Local (hot reloading) development is not available because of the reliance on the chrome sync API.
+This creates a `dist` folder which can be loaded unpacked into your browser extensions. Hot reloading development is available.
