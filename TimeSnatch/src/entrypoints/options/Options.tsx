@@ -44,6 +44,29 @@ function Options() {
   const [blockedWebsitesList, setBlockedWebsitesList] = useState<Record<string, BlockedWebsite>>({});
   const [globalTimeBudget, setGlobalTimeBudget] = useState<GlobalTimeBudget | null>(null);
 
+  // Define the list of texts
+  const ctaDiscordTexts: string[] = [
+    'Have a question? Join the',
+    'Need help? Join the',
+    'Have a suggestion? Join the',
+    'Want to chat? Join the',
+    'Like productivity? Join the',
+    'Have feedback? Join the',
+  ];
+
+  // State to store the selected text
+  const [ctaDiscordText, setCtaDiscordTexts] = useState<string>('');
+
+  // Function to select a random text
+  const selectRandomText = () => {
+    const randomIndex = Math.floor(Math.random() * ctaDiscordTexts.length);
+    setCtaDiscordTexts(ctaDiscordTexts[randomIndex]);
+  };
+
+  // Use useEffect to select a random text on component mount
+  useEffect(() => {
+    selectRandomText();
+  }, []); // Empty dependency array means this effect runs once on mount
 
 
   // Ensure data is synced on focus
@@ -356,7 +379,7 @@ function Options() {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center text-muted-foreground font-semibold">Grounded Momentum <Activity className='w-4 h-4 mx-2' /> 2025 </div>
           <div className="flex items-center text-muted-foreground font-semibold">
-            Join the
+            { ctaDiscordText }
             <div className='flex items-center'>
               <Button className="ml-3 rounded-lg" onClick={() => { window.open("https://discord.gg/JJMZQ4r2", "_blank") }}>  <img height="20" width="20" className="mx-1 color-white" src="https://cdn.simpleicons.org/discord/5c4523" /> Discord </Button>
             </div>
