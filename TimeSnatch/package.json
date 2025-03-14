@@ -1,8 +1,8 @@
 {
-  "name": "wxt-react-starter",
-  "description": "manifest.json description",
+  "name": "Time Snatch - Block Websites with Timers",
+  "description": "Time restrict websites, block websites, control your browsing patterns and beat procrastination.",
   "private": true,
-  "version": "0.0.0",
+  "version": "3.0.2",
   "type": "module",
   "scripts": {
     "dev": "wxt",
