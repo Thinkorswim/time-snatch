@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Info } from "lucide-react";
+import { Info, Plus, X } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { BlockedWebsite } from '@/models/BlockedWebsite';
 import { validateURL, extractHostnameAndDomain, updateObjectKeyAndData } from '@/lib/utils';
@@ -72,20 +72,33 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
         }
     ]);
 
-    const [scheduleTimes, setScheduleTimes] = useState<ISettingsPointer[]>([
-        {
-            value: initialScheduleEnabled ? initialBlockedWebsiteData.scheduledBlockRanges[0].start : 180,
-            radius: 12,
-            bgColor: "#fff",
-            bgColorSelected: '#eee',
-        },
-        {
-            value: initialScheduleEnabled ? initialBlockedWebsiteData.scheduledBlockRanges[0].end : 660,
-            radius: 12,
-            bgColor: "#fff",
-            bgColorSelected: '#eee',
-        }
-    ]);
+    const [scheduleTimesArray, setScheduleTimesArray] = useState<ISettingsPointer[][]>(
+        initialScheduleEnabled && initialBlockedWebsiteData.scheduledBlockRanges.length
+            ? initialBlockedWebsiteData.scheduledBlockRanges.map(range => ([
+                { value: range.start - 360, radius: 12, bgColor: "#fff", bgColorSelected: '#eee' },
+                { value: range.end - 360, radius: 12, bgColor: "#fff", bgColorSelected: '#eee' },
+            ]))
+            : [[
+                { value: 180, radius: 12, bgColor: "#fff", bgColorSelected: '#eee' },
+                { value: 660, radius: 12, bgColor: "#fff", bgColorSelected: '#eee' },
+            ]]
+    );
+
+    // Method to add new intervals
+    const addScheduleRange = () => {
+        setScheduleTimesArray(prev => [
+            ...prev,
+            [
+                { value: 180, radius: 12, bgColor: "#fff", bgColorSelected: '#eee' },
+                { value: 660, radius: 12, bgColor: "#fff", bgColorSelected: '#eee' }
+            ]
+        ]);
+    };
+
+    // Method to remove intervals
+    const removeScheduleRange = (index: number) => {
+        setScheduleTimesArray(prev => prev.filter((_, i) => i !== index));
+    };
 
     // Handle resizing of the circular sliders
     useEffect(() => {
@@ -133,7 +146,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
             if (realUrl) {
                 blockedWebsite.website = realUrl;
             } else {
-                setIsValidWebsite(false);     
+                setIsValidWebsite(false);
                 websiteInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
                 websiteInputRef.current?.focus();
                 return;
@@ -152,12 +165,10 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
         }
 
         if (isScheduleEnabled) {
-            blockedWebsite.scheduledBlockRanges = [
-                {
-                    start: (scheduleTimes[0].value as number + 360) % 1440,
-                    end: (scheduleTimes[1].value as number + 360) % 1440,
-                }
-            ]
+            blockedWebsite.scheduledBlockRanges = scheduleTimesArray.map(pair => ({
+                start: (pair[0].value as number + 360) % 1440,
+                end: (pair[1].value as number + 360) % 1440,
+            }));
         }
 
         chrome.storage.local.get("blockedWebsitesList", (data) => {
@@ -177,7 +188,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                 updatedList = {
                     ...currentList,
                     [realUrl]: blockedWebsite.toJSON(),
-                };    
+                };
             }
 
             chrome.storage.local.set({ blockedWebsitesList: updatedList }, () => {
@@ -196,7 +207,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                 setIsScheduleEnabled(false);
                 setTimeAllowedMinutes([{ value: 5 }]);
                 setTimeAllowedHours([{ value: 0 }]);
-                setScheduleTimes([{ value: 180 }, { value: 660 }]);
+                setScheduleTimesArray([[{ value: 180 }, { value: 660 }]]);
             });
         });
     };
@@ -430,118 +441,146 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                 </div>
                 {
                     isScheduleEnabled && (
-                        <div className="mx-14 mt-5">
-                            <div ref={parentRef} className="w-full relative">
-                                <RoundSlider
-                                    pointers={scheduleTimes}
-                                    onChange={setScheduleTimes}
-                                    hideText={true}
-                                    pathRadius={pathRadius}
-                                    pathThickness={12}
-                                    pathBgColor={secondaryColor}
-                                    connectionBgColor={primaryColor}
-                                    pointerBgColor={"#fff"}
-                                    pointerBgColorSelected={"#fff"}
-                                    min={0}
-                                    max={1440}
-                                />
-                                <div className="" style={{
-                                    position: "absolute",
-                                    top: "28%",
-                                    left: "50%",
-                                    transform: "translateX(-50%)",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                }}>
-                                    <div>
-                                        <div className='mb-1'>
-                                            Start Time
-                                        </div>
-                                        <div className="flex items-center">
-                                            <label className="flex items-center">
-                                                <Input
-                                                    className='w-12 no-arrows text-center'
-                                                    type="number"
-                                                    value={String(Math.floor((scheduleTimes[0].value as number + 360) % 1440 / 60)).padStart(2, '0')}
-                                                    onChange={(e) => {
-                                                        const minutes = ((scheduleTimes[0].value as number + 360) % 60);
-                                                        const hours = Math.min(Number(e.target.value), 23);
-                                                        const newValue = ((hours * 60 + minutes) - 360) % 1440;
-
-                                                        setScheduleTimes([{ ...scheduleTimes[0], value: newValue }, scheduleTimes[1]]);
-                                                    }}
-                                                    min={0}
-                                                    max={23}
-                                                    onFocus={(e) => e.target.select()}
-                                                />
-                                            </label>
-                                            <label className="flex items-center ml-2">
-                                                <Input
-                                                    className='w-12 no-arrows text-center'
-                                                    type="number"
-                                                    value={String((scheduleTimes[0].value as number + 360) % 60).padStart(2, '0')}
-                                                    onChange={(e) => {
-                                                        const minutes = Math.min(Number(e.target.value), 59);
-                                                        const hours = Math.floor((scheduleTimes[0].value as number) / 60);
-                                                        const newValue = ((hours * 60 + minutes)) % 1440;
-                                                        setScheduleTimes([{ ...scheduleTimes[0], value: newValue }, scheduleTimes[1]]);
-                                                    }}
-                                                    min={0}
-                                                    max={59}
-                                                    onFocus={(e) => e.target.select()}
-                                                />
-                                            </label>
-                                        </div>
-                                        <div className='mt-4 mb-1'>
-                                            End Time
-                                        </div>
-                                        <div className="flex items-center">
-                                            <label className="flex items-center">
-                                                <Input
-                                                    className='w-12 no-arrows text-center'
-                                                    type="number"
-                                                    value={String(Math.floor((scheduleTimes[1].value as number + 360) % 1440 / 60)).padStart(2, '0')}
-                                                    onChange={(e) => {
-                                                        const minutes = ((scheduleTimes[1].value as number + 360) % 60);
-                                                        const hours = Math.min(Number(e.target.value), 23);
-                                                        const newValue = ((hours * 60 + minutes) - 360) % 1440;
-
-                                                        setScheduleTimes([scheduleTimes[0], { ...scheduleTimes[1], value: newValue }]);
-                                                    }}
-                                                    min={0}
-                                                    max={23}
-                                                    onFocus={(e) => e.target.select()}
-                                                />
-                                            </label>
-                                            <label className="flex items-center ml-2">
-                                                <Input
-                                                    className='w-12 no-arrows text-center'
-                                                    type="number"
-                                                    value={String((scheduleTimes[1].value as number + 360) % 60).padStart(2, '0')}
-                                                    onChange={(e) => {
-                                                        const minutes = Math.min(Number(e.target.value), 59);
-                                                        const hours = Math.floor((scheduleTimes[1].value as number) / 60);
-                                                        const newValue = ((hours * 60 + minutes)) % 1440;
-                                                        setScheduleTimes([scheduleTimes[0], { ...scheduleTimes[1], value: newValue }]);
-                                                    }}
-                                                    min={0}
-                                                    max={59}
-                                                    onFocus={(e) => e.target.select()}
-                                                />
-                                            </label>
+                        <>
+                            {scheduleTimesArray.map((pair, index) => (
+                                <div key={index} className="mx-14 mt-5 relative">
+                                    {/* RoundSlider for each pair */}
+                                    <RoundSlider
+                                        pointers={pair}
+                                        onChange={(updated) => {
+                                            setScheduleTimesArray(prev => {
+                                                const copy = [...prev];
+                                                copy[index] = updated;
+                                                return copy;
+                                            });
+                                        }}
+                                        hideText={true}
+                                        pathRadius={pathRadius}
+                                        pathThickness={12}
+                                        pathBgColor={secondaryColor}
+                                        connectionBgColor={primaryColor}
+                                        pointerBgColor={"#fff"}
+                                        pointerBgColorSelected={"#fff"}
+                                        min={0}
+                                        max={1440}
+                                    />
+                                    <div
+                                        style={{
+                                            position: "absolute",
+                                            top: "28%",
+                                            left: "50%",
+                                            transform: "translateX(-50%)",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                        }}
+                                    >
+                                        <div>
+                                            <div className='mb-1'>Start Time</div>
+                                            <div className="flex items-center">
+                                                <label className="flex items-center">
+                                                    <Input
+                                                        className='w-12 no-arrows text-center'
+                                                        type="number"
+                                                        value={String(Math.floor((pair[0].value as number + 360) % 1440 / 60)).padStart(2, '0')}
+                                                        onChange={(e) => {
+                                                            const h = Math.min(Number(e.target.value), 23);
+                                                            const m = (pair[0].value as number + 360) % 60;
+                                                            const newValue = ((h * 60) + m - 360) % 1440;
+                                                            setScheduleTimesArray(prev => {
+                                                                const copy = [...prev];
+                                                                copy[index] = [{ ...pair[0], value: newValue }, pair[1]];
+                                                                return copy;
+                                                            });
+                                                        }}
+                                                        min={0}
+                                                        max={23}
+                                                        onFocus={(e) => e.target.select()}
+                                                    />
+                                                </label>
+                                                <label className="ml-2 flex items-center">
+                                                    <Input
+                                                        className='w-12 no-arrows text-center'
+                                                        type="number"
+                                                        value={String((pair[0].value as number + 360) % 60).padStart(2, '0')}
+                                                        onChange={(e) => {
+                                                            const m = Math.min(Number(e.target.value), 59);
+                                                            const h = Math.floor((pair[0].value as number) / 60);
+                                                            const newValue = ((h * 60) + m) % 1440;
+                                                            setScheduleTimesArray(prev => {
+                                                                const copy = [...prev];
+                                                                copy[index] = [{ ...pair[0], value: newValue }, pair[1]];
+                                                                return copy;
+                                                            });
+                                                        }}
+                                                        min={0}
+                                                        max={59}
+                                                        onFocus={(e) => e.target.select()}
+                                                    />
+                                                </label>
+                                            </div>
+                                            <div className='mt-4 mb-1'>End Time</div>
+                                            <div className="flex items-center">
+                                                <label className="flex items-center">
+                                                    <Input
+                                                        className='w-12 no-arrows text-center'
+                                                        type="number"
+                                                        value={String(Math.floor((pair[1].value as number + 360) % 1440 / 60)).padStart(2, '0')}
+                                                        onChange={(e) => {
+                                                            const h = Math.min(Number(e.target.value), 23);
+                                                            const m = (pair[1].value as number + 360) % 60;
+                                                            const newValue = ((h * 60) + m - 360) % 1440;
+                                                            setScheduleTimesArray(prev => {
+                                                                const copy = [...prev];
+                                                                copy[index] = [pair[0], { ...pair[1], value: newValue }];
+                                                                return copy;
+                                                            });
+                                                        }}
+                                                        min={0}
+                                                        max={23}
+                                                        onFocus={(e) => e.target.select()}
+                                                    />
+                                                </label>
+                                                <label className="ml-2 flex items-center">
+                                                    <Input
+                                                        className='w-12 no-arrows text-center'
+                                                        type="number"
+                                                        value={String((pair[1].value as number + 360) % 60).padStart(2, '0')}
+                                                        onChange={(e) => {
+                                                            const m = Math.min(Number(e.target.value), 59);
+                                                            const h = Math.floor((pair[1].value as number) / 60);
+                                                            const newValue = ((h * 60) + m) % 1440;
+                                                            setScheduleTimesArray(prev => {
+                                                                const copy = [...prev];
+                                                                copy[index] = [pair[0], { ...pair[1], value: newValue }];
+                                                                return copy;
+                                                            });
+                                                        }}
+                                                        min={0}
+                                                        max={59}
+                                                        onFocus={(e) => e.target.select()}
+                                                    />
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
-
+                                    {index > 0 && (
+                                        <div className='w-full text-center mt-5'>
+                                            <Button onClick={() => removeScheduleRange(index)}> <X className='h-5 w-5 mr-1' /> Remove Interval</Button>
+                                        </div>
+                                    )}
                                 </div>
+                            ))}
+                            <div className='w-full text-center mt-2'>
+                                <Button className="mt-2" onClick={addScheduleRange}> <Plus className='h-5 w-5 mr-1' />  Add Interval</Button>
                             </div>
-                        </div>
+                        </>
                     )}
             </div>
 
             <div className='w-full text-right mb-2'>
-                <Button className="mt-8" onClick={addBlockedWebsite}> {blockedWebsiteProp ? "Save Website" : "Block Website"} </Button>
+                <Button className="mt-8" onClick={addBlockedWebsite}>  {blockedWebsiteProp ? "Save Website" : "Block Website"} </Button>
             </div>
 
         </div >
