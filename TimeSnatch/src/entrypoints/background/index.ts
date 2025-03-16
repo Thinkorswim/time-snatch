@@ -278,12 +278,20 @@ export default defineBackground(() => {
 
         if (
             scheduledBlockRanges.some(
-                (range: { start: number; end: number }) => currentTimestamp >= range.start && currentTimestamp < range.end
+                (range) => isWithinScheduledBlock(range, currentTimestamp)
             )
         ) {
             redirectToUrl(redirectUrl, tab.id!);
             return;
         }
+    }
+
+    function isWithinScheduledBlock(range: { start: number; end: number }, currentTimestamp: number) {
+        // Handles crossing midnight by checking if end < start
+        if (range.end < range.start) {
+            return currentTimestamp >= range.start || currentTimestamp < range.end;
+        }
+        return currentTimestamp >= range.start && currentTimestamp < range.end;
     }
 
     const redirectToUrl = (url: string, tabId: number) => {
