@@ -129,7 +129,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
             }));
         }
 
-        chrome.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() }, () => {
+        browser.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() }, () => {
             // Close the dialog
             if (callback) {
                 callback();

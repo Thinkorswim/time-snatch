@@ -72,7 +72,7 @@ function Options() {
   // Ensure data is synced on focus
   useEffect(() => {
     const handleFocus = () => {
-      chrome.storage.local.get(["blockedWebsitesList", "globalTimeBudget"], (data) => {
+      browser.storage.local.get(["blockedWebsitesList", "globalTimeBudget"], (data) => {
         if (data.blockedWebsitesList) {
           setBlockedWebsitesList(data.blockedWebsitesList);
         }
@@ -93,10 +93,10 @@ function Options() {
     setIsWebsiteDialogOpen(false);
     setBlockedWebsite(null);
 
-    chrome.storage.local.get(['blockedWebsitesList'], (data) => {
+    browser.storage.local.get(['blockedWebsitesList'], (data) => {
       if (data.blockedWebsitesList) {
         setBlockedWebsitesList(data.blockedWebsitesList);
-        chrome.storage.sync.set({ blockedWebsitesList: data.blockedWebsitesList });
+        browser.storage.sync.set({ blockedWebsitesList: data.blockedWebsitesList });
       }
     });
 
@@ -106,11 +106,11 @@ function Options() {
     setIsEditGlobalTimeBudgetDialogOpen(false);
     setIsAddGlobalTimeBudgetWebsiteDialogOpen(false);
 
-    chrome.storage.local.get(['globalTimeBudget'], (data) => {
+    browser.storage.local.get(['globalTimeBudget'], (data) => {
       if (data.globalTimeBudget) {
         const globalTimeBudget = GlobalTimeBudget.fromJSON(data.globalTimeBudget);
         setGlobalTimeBudget(globalTimeBudget);
-        chrome.storage.sync.set({ globalTimeBudget: globalTimeBudget.toJSON() });
+        browser.storage.sync.set({ globalTimeBudget: globalTimeBudget.toJSON() });
       }
     });
   }
@@ -121,7 +121,7 @@ function Options() {
     const newBlockedWebsitesList = { ...blockedWebsitesList };
     delete newBlockedWebsitesList[websiteToDelete];
 
-    chrome.storage.local.set({ blockedWebsitesList: newBlockedWebsitesList }, () => {
+    browser.storage.local.set({ blockedWebsitesList: newBlockedWebsitesList }, () => {
       setBlockedWebsitesList(newBlockedWebsitesList);
       setWebsiteToDelete("");
     });
@@ -133,7 +133,7 @@ function Options() {
 
     globalTimeBudget.websites.delete(globalWebsiteToDelete)
 
-    chrome.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() }, () => {
+    browser.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() }, () => {
       setGlobalTimeBudget(globalTimeBudget);
       setGlobalWebsiteToDelete("");
     });
@@ -151,7 +151,7 @@ function Options() {
 
   useEffect(() => {
     // Retrieve the list of blocked websites from storage
-    chrome.storage.local.get(['blockedWebsitesList', 'globalTimeBudget'], (data) => {
+    browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget'], (data) => {
       if (data.blockedWebsitesList) {
         setBlockedWebsitesList(data.blockedWebsitesList);
       }
@@ -376,7 +376,7 @@ function Options() {
       </div>
 
       <footer className="bg-muted rounded-t-lg py-5 px-8 mt-10">
-        <div className="container mx-auto flex justify-between items-center">
+        <div className="container mx-auto flex justify-between items-center text-xs">
           <div className="flex items-center text-muted-foreground font-semibold"> <img src="/images/gm_logo.svg" alt="Grounded Momentum Logo" className="w-6 h-6 mr-2" /> Grounded Momentum <Dot className='w-2 h-2 mx-1' /> 2025 </div>
           <div className="flex items-center text-muted-foreground font-semibold">
             { ctaDiscordText }

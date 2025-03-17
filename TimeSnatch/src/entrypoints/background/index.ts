@@ -3,14 +3,14 @@ import { GlobalTimeBudget } from "@/models/GlobalTimeBudget";
 import { timeDisplayFormatBadge, extractHostnameAndDomain, validateURL } from "@/lib/utils";
 
 export default defineBackground(() => {
-    chrome.runtime.onInstalled.addListener((object) => {
+    browser.runtime.onInstalled.addListener((object) => {
         if (object.reason === 'install') {
-            chrome.runtime.openOptionsPage();
+            browser.runtime.openOptionsPage();
         }
 
-        chrome.storage.local.get(['blockedWebsitesList', 'globalTimeBudget'], (data) => {
+        browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget'], (data) => {
             if (!data.blockedWebsitesList) {
-                chrome.storage.local.set({ blockedWebsitesList: {} });
+                browser.storage.local.set({ blockedWebsitesList: {} });
             }
 
             if (!data.globalTimeBudget) {
@@ -23,13 +23,13 @@ export default defineBackground(() => {
                     []
                 );
 
-                chrome.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() });
+                browser.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() });
             }
 
             if (object.reason === 'update') {
 
                 // Handle legacy data
-                chrome.storage.sync.get(['blockList'], (data_blocked) => {
+                browser.storage.sync.get(['blockList'], (data_blocked) => {
                     const blockedList = data_blocked.blockList
 
                     if (blockedList && blockedList.length > 0) {
@@ -58,13 +58,13 @@ export default defineBackground(() => {
 
                         });
 
-                        chrome.storage.sync.remove(['blockList']);
-                        chrome.storage.local.set({ blockedWebsitesList: newBlockedList });
+                        browser.storage.sync.remove(['blockList']);
+                        browser.storage.local.set({ blockedWebsitesList: newBlockedList });
                     }
                 });
 
                 // Loop through all the blocked websites and change the key
-                chrome.storage.local.get(['blockedWebsitesList'], (data) => {
+                browser.storage.local.get(['blockedWebsitesList'], (data) => {
                     const blockedWebsitesList = data.blockedWebsitesList;
                     if (!blockedWebsitesList) return;
 
@@ -76,7 +76,7 @@ export default defineBackground(() => {
                         }
                     }
 
-                    chrome.storage.local.set({ blockedWebsitesList: newBlockedWebsitesList });
+                    browser.storage.local.set({ blockedWebsitesList: newBlockedWebsitesList });
                 });
 
             }
@@ -84,7 +84,7 @@ export default defineBackground(() => {
     });
 
     setInterval(() => {
-        chrome.windows.getCurrent((window) => {
+        browser.windows.getCurrent((window) => {
             if (!window.focused) {
                 stopCurrentBlocking();
             }
@@ -105,7 +105,7 @@ export default defineBackground(() => {
         console.log("Tab activated");
         stopCurrentBlocking();
 
-        chrome.tabs.get(activeInfo.tabId, (tab) => {
+        browser.tabs.get(activeInfo.tabId, (tab) => {
             if (tab.active && tab.url) {
                 debounceCheckUrlBlockStatus(tab);
             }
@@ -117,8 +117,8 @@ export default defineBackground(() => {
 
         stopCurrentBlocking();
 
-        if (windowId !== chrome.windows.WINDOW_ID_NONE) {
-            chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
+        if (windowId !== browser.windows.WINDOW_ID_NONE) {
+            browser.tabs.query({ currentWindow: true, active: true }, (tabs) => {
                 if (tabs[0].active && tabs[0].url) {
                     debounceCheckUrlBlockStatus(tabs[0]);
                 }
@@ -127,12 +127,12 @@ export default defineBackground(() => {
     });
 
 
-    chrome.runtime.onConnect.addListener((port) => {
+    browser.runtime.onConnect.addListener((port) => {
         stopCurrentBlocking(); // Stop blocking while popup is open
-    
+
         port.onDisconnect.addListener(() => {
             // Check active tab when popup closes
-            chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
+            browser.tabs.query({ currentWindow: true, active: true }, (tabs) => {
                 if (tabs.length > 0 && tabs[0].url) {
                     debounceCheckUrlBlockStatus(tabs[0]);
                 }
@@ -161,7 +161,7 @@ export default defineBackground(() => {
 
 
     const checkUrlBlockStatus = (tab: chrome.tabs.Tab) => {
-        chrome.storage.local.get(['blockedWebsitesList', 'globalTimeBudget'], (data) => {
+        browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget'], (data) => {
             if (!data.blockedWebsitesList || !data.globalTimeBudget) return;
 
             const websiteNames = Object.keys(data.blockedWebsitesList);
@@ -179,7 +179,7 @@ export default defineBackground(() => {
 
             if (globalTimeBudget && globalTimeBudget.lastAccessedDate !== today) {
                 globalTimeBudget.lastAccessedDate = today;
-                chrome.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() })
+                browser.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() })
             }
 
             const currentTabUrl = extractHostnameAndDomain(tab.url!);
@@ -296,12 +296,12 @@ export default defineBackground(() => {
 
     const redirectToUrl = (url: string, tabId: number) => {
         if (url == "") {
-            chrome.tabs.update(tabId, { "url": chrome.runtime.getURL('/inspiration.html') });
+            browser.tabs.update(tabId, { "url": browser.runtime.getURL('/inspiration.html') });
         } else {
             if (url.includes("https://") || url.includes("http://")) {
-                chrome.tabs.update(tabId, { "url": url });
+                browser.tabs.update(tabId, { "url": url });
             } else {
-                chrome.tabs.update(tabId, { "url": 'https://' + url });
+                browser.tabs.update(tabId, { "url": 'https://' + url });
             }
         }
     }
@@ -314,35 +314,40 @@ export default defineBackground(() => {
             }
         }
 
-        chrome.storage.local.set({ blockedWebsitesList: blockedWebsites })
+        browser.storage.local.set({ blockedWebsitesList: blockedWebsites })
     }
 
 
     const storeData = (websiteName: string, totalTime: number) => {
-        chrome.storage.local.get(['blockedWebsitesList'], (data) => {
+        browser.storage.local.get(['blockedWebsitesList'], (data) => {
             if (!data.blockedWebsitesList || typeof data.blockedWebsitesList !== 'object') return;
             let blockedWebsitesList = data.blockedWebsitesList
 
             blockedWebsitesList[websiteName].totalTime = totalTime;
 
-            chrome.storage.local.set({ blockedWebsitesList: blockedWebsitesList });
+            browser.storage.local.set({ blockedWebsitesList: blockedWebsitesList });
         });
     }
 
     const storeGlobalData = (totalTime: number) => {
-        chrome.storage.local.get(['globalTimeBudget'], (data) => {
+        browser.storage.local.get(['globalTimeBudget'], (data) => {
             if (!data.globalTimeBudget || typeof data.globalTimeBudget !== 'object') return;
 
             let globalTimeBudget = GlobalTimeBudget.fromJSON(data.globalTimeBudget);
 
             globalTimeBudget.totalTime = totalTime;
 
-            chrome.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() });
+            browser.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() });
         });
     }
 
     const setBadge = (text: string) => {
-        chrome.action.setBadgeBackgroundColor({ color: "#ae0f0f" });
-        chrome.action.setBadgeText({ text });
+        if (import.meta.env.BROWSER === 'firefox') {
+            browser.browserAction.setBadgeBackgroundColor({ color: "#ae0f0f" });
+            browser.browserAction.setBadgeText({ text });
+        } else {
+            browser.action.setBadgeBackgroundColor({ color: "#ae0f0f" });
+            browser.action.setBadgeText({ text });
+        }
     }
 });

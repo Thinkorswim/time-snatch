@@ -23,14 +23,14 @@ function Popup() {
   const [activeTab, setActiveTab] = useState('blockedWebsites');
 
   useEffect(() => {
-    chrome.runtime.connect();
+    browser.runtime.connect();
     
     // Retrieve the list of blocked websites from storage
-    chrome.storage.local.get(["blockedWebsitesList", "globalTimeBudget"], (data) => {
+    browser.storage.local.get(["blockedWebsitesList", "globalTimeBudget"], (data) => {
       if (data.blockedWebsitesList) {
         setBlockedWebsitesList(data.blockedWebsitesList);
 
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        browser.tabs.query({ active: true, currentWindow: true }, (tabs) => {
           if (tabs && tabs.length > 0 && tabs[0].url) {
             const website = extractHostnameAndDomain(tabs[0].url);
             if (website) {
@@ -66,7 +66,7 @@ function Popup() {
           </div>
         </div>
         <div className='flex items-center justify-end'>
-          <Cog className='w-5 h-5 text-chart-1 cursor-pointer' onClick={() => chrome.runtime.openOptionsPage()} />
+          <Cog className='w-5 h-5 text-chart-1 cursor-pointer' onClick={() => browser.runtime.openOptionsPage()} />
         </div>
       </div>
 
