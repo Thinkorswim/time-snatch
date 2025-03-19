@@ -29,12 +29,12 @@ export const GlobalTimeBudgetWebsiteForm: React.FC<GlobalTimeBudgetWebsiteFormPr
             const realUrl = extractHostnameAndDomain(websiteValue);
 
             if (realUrl) {
-                chrome.storage.local.get(['globalTimeBudget'], (data) => {
+                browser.storage.local.get(['globalTimeBudget'], (data) => {
                     if (data.globalTimeBudget) {
                         const globalTimeBudget = GlobalTimeBudget.fromJSON(data.globalTimeBudget);
                         globalTimeBudget.websites.add(realUrl)
 
-                        chrome.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() }, () => {
+                        browser.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() }, () => {
                             // Close the dialog
                             if (callback) {
                                 callback();

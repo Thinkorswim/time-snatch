@@ -224,6 +224,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                 <label className="flex items-center">
                                     <Input
                                         className='w-12 no-arrows text-center'
+                                        style={{ MozAppearance: 'textfield' }}
                                         type="number"
                                         value={String(timeAllowedHours[0].value).padStart(2, '0')}
                                         onChange={(e) => setTimeAllowedHours([{ value: Math.min(Number(e.target.value), 10) }])}
@@ -240,6 +241,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                 <label className="flex items-center">
                                     <Input
                                         className='w-12 no-arrows text-center'
+                                        style={{ MozAppearance: 'textfield' }}
                                         type="number"
                                         value={String(timeAllowedMinutes[0].value).padStart(2, '0')}
                                         onChange={(e) => setTimeAllowedMinutes([{ value: Math.min(Number(e.target.value), 59) }])}
@@ -395,6 +397,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                                 {/* Hours */}
                                                 <Input
                                                     className='w-12 no-arrows text-center'
+                                                    style={{ MozAppearance: 'textfield' }}
                                                     type="number"
                                                     value={String(Math.floor((pair[0].value as number + 360) % 1440 / 60)).padStart(2, '0')}
                                                     onChange={(e) => {
@@ -412,6 +415,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                                 {/* Minutes */}
                                                 <Input
                                                     className='w-12 no-arrows text-center ml-2'
+                                                    style={{ MozAppearance: 'textfield' }}
                                                     type="number"
                                                     value={String((pair[0].value  as number + 360) % 60).padStart(2, '0')}
                                                     onChange={(e) => {
@@ -432,6 +436,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                                 {/* Hours */}
                                                 <Input
                                                     className='w-12 no-arrows text-center'
+                                                    style={{ MozAppearance: 'textfield' }}
                                                     type="number"
                                                     value={String(Math.floor((pair[1].value as number  + 360) % 1440 / 60)).padStart(2, '0')}
                                                     onChange={(e) => {
@@ -449,6 +454,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                                 {/* Minutes */}
                                                 <Input
                                                     className='w-12 no-arrows text-center ml-2'
+                                                    style={{ MozAppearance: 'textfield' }}
                                                     type="number"
                                                     value={String((pair[1].value as number + 360) % 60).padStart(2, '0')}
                                                     onChange={(e) => {

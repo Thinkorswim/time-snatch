@@ -171,7 +171,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
             }));
         }
 
-        chrome.storage.local.get("blockedWebsitesList", (data) => {
+        browser.storage.local.get("blockedWebsitesList", (data) => {
             const currentList = data.blockedWebsitesList || {};
             const realUrl = extractHostnameAndDomain(websiteValue)!;
 
@@ -191,7 +191,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                 };
             }
 
-            chrome.storage.local.set({ blockedWebsitesList: updatedList }, () => {
+            browser.storage.local.set({ blockedWebsitesList: updatedList }, () => {
                 // Close the dialog
                 if (callback) {
                     callback();
@@ -309,6 +309,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                     <Input
                                         className='w-12 no-arrows text-center'
                                         type="number"
+                                        style={{ MozAppearance: 'textfield' }}
                                         value={String(timeAllowedHours[0].value).padStart(2, '0')}
                                         onChange={(e) => setTimeAllowedHours([{ value: Math.min(Number(e.target.value), 10) }])}
                                         min={0}
@@ -325,6 +326,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                     <Input
                                         className='w-12 no-arrows text-center'
                                         type="number"
+                                        style={{ MozAppearance: 'textfield' }}
                                         value={String(timeAllowedMinutes[0].value).padStart(2, '0')}
                                         onChange={(e) => setTimeAllowedMinutes([{ value: Math.min(Number(e.target.value), 59) }])}
                                         min={0}
@@ -483,6 +485,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                                     <Input
                                                         className='w-12 no-arrows text-center'
                                                         type="number"
+                                                        style={{ MozAppearance: 'textfield' }}
                                                         value={String(Math.floor((pair[0].value as number + 360) % 1440 / 60)).padStart(2, '0')}
                                                         onChange={(e) => {
                                                             const h = Math.min(Number(e.target.value), 23);
@@ -503,6 +506,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                                     <Input
                                                         className='w-12 no-arrows text-center'
                                                         type="number"
+                                                        style={{ MozAppearance: 'textfield' }}
                                                         value={String((pair[0].value as number + 360) % 60).padStart(2, '0')}
                                                         onChange={(e) => {
                                                             const m = Math.min(Number(e.target.value), 59);
@@ -526,6 +530,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                                     <Input
                                                         className='w-12 no-arrows text-center'
                                                         type="number"
+                                                        style={{ MozAppearance: 'textfield' }}
                                                         value={String(Math.floor((pair[1].value as number + 360) % 1440 / 60)).padStart(2, '0')}
                                                         onChange={(e) => {
                                                             const h = Math.min(Number(e.target.value), 23);
@@ -546,6 +551,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                                     <Input
                                                         className='w-12 no-arrows text-center'
                                                         type="number"
+                                                        style={{ MozAppearance: 'textfield' }}
                                                         value={String((pair[1].value as number + 360) % 60).padStart(2, '0')}
                                                         onChange={(e) => {
                                                             const m = Math.min(Number(e.target.value), 59);
