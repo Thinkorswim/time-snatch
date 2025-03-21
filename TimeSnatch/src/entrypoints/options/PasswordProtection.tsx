@@ -70,14 +70,35 @@ export function PasswordProtection({
     }
   }
 
+  const handleStep1 = () => {
+    if (password.length > 0) {
+      setPasswordStep(2);
+    } else {
+      setErrorMsg("Password cannot be empty");
+    }
+  }
+
   const handlePasswordSetDialogChange = (open: boolean) => {
     if (!open) {
       if (!passwordSaved) {
         setRequirePassword(false);
+        setPasswordStep(1);
+        setPassword("");
+        setPasswordConfirm("");
+        setErrorMsg("");
       }
     }
 
     setIsPasswordSetDialogOpen(open);
+  }
+
+  const handlePasswordEntryDialogChange = (open: boolean) => {
+    if (!open) {
+      setPasswordCheck("");
+      setErrorMsg("");
+    }
+
+    setIsPasswordEntryDialogOpen(open);
   }
 
   const handlePasswordCheck = async () => {
@@ -128,7 +149,7 @@ export function PasswordProtection({
       <Dialog open={isPasswordSetDialogOpen} onOpenChange={handlePasswordSetDialogChange} >
         <DialogContent className="bg-card" >
           <div className='bg-card m-2 p-4 rounded-md'>
-            <DialogTitle>Choose password</DialogTitle>
+            <DialogTitle>Password Protection</DialogTitle>
             <DialogDescription>
               <div className="w-[99%] mx-auto">
                 <div className="mt-5">
@@ -160,12 +181,12 @@ export function PasswordProtection({
                         onChange={(e) => setPassword(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            setPasswordStep(2)
+                            handleStep1();
                           }
                         }}
                       />
                       <div className='w-full text-right mb-2'>
-                        <Button className="mt-5" onClick={() => setPasswordStep(2)}> Next </Button>
+                        <Button className="mt-5" onClick={() => handleStep1() }> Next </Button>
                       </div>
                     </>
                   )}
@@ -202,7 +223,7 @@ export function PasswordProtection({
       </Dialog>
 
 
-      <Dialog open={isPasswordEntryDialogOpen} onOpenChange={setIsPasswordEntryDialogOpen} >
+      <Dialog open={isPasswordEntryDialogOpen} onOpenChange={handlePasswordEntryDialogChange} >
         <DialogContent className="bg-card" >
           <div className='bg-card m-2 p-4 rounded-md'>
             <DialogTitle>Disable Password Protection</DialogTitle>
