@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Plus, Pencil, Info, ShieldBan, Component, Activity, Dot } from 'lucide-react'
+import { Plus, Pencil, Info, ShieldBan, Component, Activity, Dot, UserCog, Settings } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -28,6 +28,7 @@ import { GlobalTimeBudget } from '@/models/GlobalTimeBudget'
 import { timeDisplayFormat, scheduledBlockDisplay } from '@/lib/utils'
 import { GlobalTimeBudgetWebsiteForm } from '@/components/custom/GlobalTimeBudgetWebsiteForm'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { PasswordProtection } from './PasswordProtection';
 
 function Options() {
   const [isAddWebsiteDialogOpen, setIsWebsiteDialogOpen] = useState(false);
@@ -43,6 +44,8 @@ function Options() {
 
   const [blockedWebsitesList, setBlockedWebsitesList] = useState<Record<string, BlockedWebsite>>({});
   const [globalTimeBudget, setGlobalTimeBudget] = useState<GlobalTimeBudget | null>(null);
+
+  const [requirePassword, setRequirePassword] = useState(false);
 
   // Define the list of texts
   const ctaDiscordTexts: string[] = [
@@ -173,12 +176,14 @@ function Options() {
             <img src="/images/logo.svg" alt="Logo" className="w-10 h-10 mr-4" />
 
             <TabsList className='py-5 px-2'>
-
               <TabsTrigger className='data-[state=active]:shadow-none' value="blockedWebsites"><ShieldBan className='w-5 h-5 mr-1' /> Blocked Websites</TabsTrigger>
               <TabsTrigger className='data-[state=active]:shadow-none' value="globalTimeBudget"><Component className='w-5 h-5 mr-1' /> Group Time Budget</TabsTrigger>
+              <TabsTrigger className='data-[state=active]:shadow-none' value="settings"><Settings className='w-5 h-5 mr-1' />  Settings</TabsTrigger>
             </TabsList>
           </div>
 
+
+          {/* BLOCKED WEBSITES TAB */}
           <TabsContent value="blockedWebsites">
             <div className='flex items-center justify-between mb-5 mt-10'>
 
@@ -229,8 +234,9 @@ function Options() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-
           </TabsContent>
+
+          {/* BLOCKED WEBSITES TAB */}
           <TabsContent value="globalTimeBudget">
             <div className='mt-10 mb-5'>
 
@@ -241,7 +247,7 @@ function Options() {
                     <Tooltip delayDuration={0}>
                       <TooltipTrigger asChild >
                         <button tabIndex={-1} className="flex items-center justify-center ml-2 rounded-full" >
-                          <Info className="ml-3 mt-2 w-5 h-5 text-chart-5" />
+                          <Info className="ml-2 mt-0.5 w-5 h-5 text-chart-5" />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent className="bg-primary text-foreground p-2 rounded " >
@@ -342,9 +348,6 @@ function Options() {
                   </ScrollArea>
                 </DialogContent>
               </Dialog>
-
-
-
             </div>
 
             <div className="rounded-xl bg-muted/50 px-5 py-4" >
@@ -372,16 +375,35 @@ function Options() {
               </DialogContent>
             </Dialog>
           </TabsContent>
+
+          {/* SETTINGS TAB */}
+          <TabsContent value="settings">
+            <div className='mt-10 mb-5'>
+              <div className='text-3xl font-bold w-full text-muted-foreground'>
+                Settings
+              </div>
+              <div className='mt-8 bg-muted/50 p-5 rounded-xl'>
+
+                <PasswordProtection
+                  requirePassword={requirePassword}
+                  setRequirePassword={setRequirePassword}
+                />
+              </div>
+            </div>
+
+          </TabsContent>
         </Tabs>
       </div>
+
+
 
       <footer className="bg-muted rounded-t-lg py-5 px-8 mt-10">
         <div className="container mx-auto flex justify-between items-center text-xs">
           <div className="flex items-center text-muted-foreground font-semibold"> <img src="/images/gm_logo.svg" alt="Grounded Momentum Logo" className="w-6 h-6 mr-2" /> Grounded Momentum <Dot className='w-2 h-2 mx-1' /> 2025 </div>
           <div className="flex items-center text-muted-foreground font-semibold">
-            { ctaDiscordText }
+            {ctaDiscordText}
             <div className='flex items-center'>
-              <Button className="ml-3 rounded-lg" onClick={() => { window.open("https://discord.gg/JJMZQ4r2", "_blank") }}>  <img height="20" width="20" className="mx-1 color-white" src="https://cdn.simpleicons.org/discord/5c4523" /> Discord </Button>
+              <Button className="ml-3 rounded-lg" onClick={() => { window.open("https://discord.gg/SvTsqKwsgN", "_blank") }}>  <img height="20" width="20" className="mx-1 color-white" src="https://cdn.simpleicons.org/discord/5c4523" /> Discord </Button>
             </div>
           </div>
         </div>
