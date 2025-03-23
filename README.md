@@ -10,7 +10,7 @@ Time Snatch is lightweight, reliable and secure. It gives you the flexibility to
 
 The "Read your browsing history" permission is needed to check whether the current website you are visiting matches any of the ones you have blocked. The extension never saves, sends or uses any of this information for other purposes.
 
-## Install locally
+## Install locally (Chrome)
 
 1. Download the latest .zip file version from [https://github.com/Thinkorswim/time-snatch/releases/tag/release](https://github.com/Thinkorswim/time-snatch/releases/tag/release)
 2. Unzip the file and you should have a folder `time-snatch`
