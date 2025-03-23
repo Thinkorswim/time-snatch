@@ -94,7 +94,6 @@ export default defineBackground(() => {
     let activeBlockTimer: NodeJS.Timeout | null = null;
 
     browser.tabs.onUpdated.addListener((_tabId, _changedInfo, tab) => {
-        console.log("Tab updated");
         if (tab.active && tab.url) {
             stopCurrentBlocking();
             debounceCheckUrlBlockStatus(tab);
@@ -102,7 +101,6 @@ export default defineBackground(() => {
     });
 
     browser.tabs.onActivated.addListener((activeInfo) => {
-        console.log("Tab activated");
         stopCurrentBlocking();
 
         browser.tabs.get(activeInfo.tabId, (tab) => {
@@ -113,8 +111,6 @@ export default defineBackground(() => {
     });
 
     browser.windows.onFocusChanged.addListener((windowId) => {
-        console.log("Tab focus");
-
         stopCurrentBlocking();
 
         if (windowId !== browser.windows.WINDOW_ID_NONE) {
