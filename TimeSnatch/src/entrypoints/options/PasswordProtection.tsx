@@ -38,14 +38,6 @@ export function PasswordProtection({
     }
   }, [passwordStep]);
 
-  useEffect(() => {
-    browser.storage.local.get('password').then((data) => {
-      if (data.password) {
-        setRequirePassword(true);
-      }
-    });
-  }, []);
-
   const handleToggleRequirePassword = (checked: boolean) => {
     if (checked) {
       setIsPasswordSetDialogOpen(true);
