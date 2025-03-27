@@ -1,6 +1,6 @@
 # Time Sntach - Time restrict websites, block websites and control your browsing patterns
 
-![time snatch](Design/marketplace/marquee.jpg)
+![time snatch](Design/marketplace/marquee.png)
 
 Time Snatch allows you to limit the amount of time you spend on distracting websites.
 
