@@ -20,21 +20,68 @@ export const validateURL = (url: string) => {
   }
 };
 
-export const extractHostnameAndDomain = (url: string) => {
+export const extractHighLevelDomain = (url: string): string | null => {
   try {
     const normalizedUrl = url.startsWith('http://') || url.startsWith('https://')
       ? url
       : `https://${url}`;
 
     const { hostname } = new URL(normalizedUrl); // Extract the hostname
-    const parts = hostname.split('.');
+
+    // Remove the 'www.' prefix if it exists
+    const domain = hostname.startsWith('www.') ? hostname.slice(4) : hostname;
+
+    const parts = domain.split('.');
     if (parts.length > 2) {
       // Remove subdomains, keeping only the domain and extension
       return parts.slice(-2).join('.');
     }
-    return hostname;
+
+    return domain;
   } catch (error) {
     return null;
+  }
+};
+
+export const extractHostnameAndDomain = (url: string): string | null => {
+  try {
+    const normalizedUrl = url.startsWith('http://') || url.startsWith('https://')
+      ? url
+      : `https://${url}`;
+
+    const { hostname } = new URL(normalizedUrl); // Extract the hostname
+
+    const domain = hostname.startsWith('www.') ? hostname.slice(4) : hostname;
+
+    return domain;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const hasSubdomain = (url: string | null): boolean => {
+  if (!url) return false; // Return false if the URL is null
+
+  try {
+    const normalizedUrl = url.startsWith('http://') || url.startsWith('https://')
+      ? url
+      : `https://${url}`;
+
+    const { hostname } = new URL(normalizedUrl); // Extract the hostname
+
+    // Remove the 'www.' prefix if it exists
+    const domain = hostname.startsWith('www.') ? hostname.slice(4) : hostname;
+
+    const parts = domain.split('.');
+
+    // Ensure there are more than two parts and each part is non-empty
+    if (parts.length > 2 && parts.every(part => part.length > 0)) {
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    return false;
   }
 };
 
@@ -100,7 +147,7 @@ export const timeDisplayFormat = (time: number) => {
 
 
 export const scheduledBlockDisplay = (range: { start: number, end: number }) => {
-        
+
   const { hours: startHours, minutes: startMinutes } = convertMinutesToMinutesHours(range.start)
   const { hours: endHours, minutes: endMinutes } = convertMinutesToMinutesHours(range.end)
 

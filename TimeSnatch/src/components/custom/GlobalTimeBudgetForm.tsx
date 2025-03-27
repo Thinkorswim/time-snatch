@@ -267,7 +267,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
             <div className="mt-8">
                 <div className="flex items-center justify-between max-w-[250px]" >
                     <div className="flex items-center" >
-                        <Label htmlFor="redirect-enabled"> Redirect </Label>
+                        <Label htmlFor="redirect-enabled"> Custom Redirect </Label>
                         <TooltipProvider>
                             <Tooltip delayDuration={0}>
                                 <TooltipTrigger asChild >
@@ -276,7 +276,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                                    Redirect to a specific website when the group of blocked website is accessed. <br /> Leave blank to redirect to an inspirational quote.
+                                    Redirect to a chosen website instead of the default inspirational quotes page.
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>

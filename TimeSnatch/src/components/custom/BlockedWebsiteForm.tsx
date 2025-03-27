@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Info, Plus, X } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { BlockedWebsite } from '@/models/BlockedWebsite';
-import { validateURL, extractHostnameAndDomain, updateObjectKeyAndData } from '@/lib/utils';
+import { validateURL, extractHostnameAndDomain, updateObjectKeyAndData, hasSubdomain, extractHighLevelDomain } from '@/lib/utils';
 import { RoundSlider, ISettingsPointer } from 'mz-react-round-slider';
 
 interface BlockedWebsiteFormProps {
@@ -34,6 +34,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
     }
 
     const [websiteValue, setWebsiteValue] = useState(initialBlockedWebsiteData.website);
+    const [websiteSubDomainInfo, setWebsiteSubDomainInfo] = useState<React.ReactNode>(null);
     const [isValidWebsite, setIsValidWebsite] = useState(true);
 
     const [isIncognitoEnabled, setIsIncognitoEnabled] = useState(initialBlockedWebsiteData.blockIncognito);
@@ -208,9 +209,25 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                 setTimeAllowedMinutes([{ value: 5 }]);
                 setTimeAllowedHours([{ value: 0 }]);
                 setScheduleTimesArray([[{ value: 180 }, { value: 660 }]]);
+                setWebsiteSubDomainInfo(null);
             });
         });
     };
+
+    const handleWebsiteInput = (e: React.FocusEvent<HTMLInputElement>) => {
+        const inputValue = e.target.value;
+        setWebsiteValue(inputValue);
+        const domain = extractHostnameAndDomain(inputValue);
+        if (inputValue && hasSubdomain(inputValue)) {
+            setWebsiteSubDomainInfo(
+                <>
+                    This action will only apply to <span className='font-bold'>{domain}</span> but not all <span className='font-bold'>{extractHighLevelDomain(inputValue)}</span> sites.
+                </>
+            );
+        } else {
+            setWebsiteSubDomainInfo(null);
+        }
+    }
 
     return (
         <div className="w-[99%] mx-auto">
@@ -230,8 +247,9 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                         </Tooltip>
                     </TooltipProvider>
                 </div>
-                <Input ref={websiteInputRef} className='mt-2' id="websiteName" value={websiteValue} placeholder="Enter website URL" onChange={(e) => setWebsiteValue(e.target.value)} />
+                <Input ref={websiteInputRef} className='mt-2' id="websiteName" value={websiteValue} placeholder="Enter website URL" onChange={handleWebsiteInput} />
                 {!isValidWebsite && <p className="text-red-500 text-sm mt-2">Invalid URL</p>}
+                {websiteSubDomainInfo && <p className="text-sm mt-2">{websiteSubDomainInfo}</p>}
             </div>
 
             <div className="mt-5 flex items-center" >
@@ -360,7 +378,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                                    Redirect to a specific website when the blocked website is accessed. <br /> Switch off to redirect to the default inspirational quotes page.
+                                    Redirect to a chosen website instead of the default inspirational quotes page.
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
