@@ -3,10 +3,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Info, Plus, X } from "lucide-react";
+import { Check, Info, Plus, X } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { BlockedWebsite } from '@/models/BlockedWebsite';
-import { validateURL, extractHostnameAndDomain, updateObjectKeyAndData } from '@/lib/utils';
+import { validateURL, extractHostnameAndDomain, updateObjectKeyAndData, numberToDay, timeDisplayFormat } from '@/lib/utils';
 import { RoundSlider, ISettingsPointer } from 'mz-react-round-slider';
 
 interface BlockedWebsiteFormProps {
@@ -24,9 +24,10 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
     } else {
         initialBlockedWebsiteData = BlockedWebsite.fromJSON({
             website: "",
-            timeAllowed: 300,
+            timeAllowed: { 0: 300, 1: 300, 2: 300, 3: 300, 4: 300, 5: 300, 6: 300 },
             totalTime: 0,
             blockIncognito: false,
+            variableSchedule: false,
             redirectUrl: "",
             lastAccessedDate: new Date().toLocaleDateString('en-CA').slice(0, 10),
             scheduledBlockRanges: [],
@@ -53,19 +54,22 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
     const websiteInputRef = useRef<HTMLInputElement | null>(null);
     const redirectInputRef = useRef<HTMLInputElement | null>(null);
 
+    const [isVariableScheduleEnabled, setIsVariableScheduleEnabled] = useState(initialBlockedWebsiteData.variableSchedule);
+    const [selectedDay, setSelectedDay] = useState<number>(0);
+    const [timeAllowed, setTimeAllowed] = useState<{ [key: string]: number; }>(initialBlockedWebsiteData.timeAllowed);
+
     const [timeAllowedMinutes, setTimeAllowedMinutes] = useState<ISettingsPointer[]>([
         {
-            value: Math.floor(initialBlockedWebsiteData.timeAllowed % 3600 / 60),
+            value: Math.floor(initialBlockedWebsiteData.timeAllowed[selectedDay] % 3600 / 60),
             radius: 12,
             bgColor: "#fff",
             bgColorSelected: '#eee',
         }
     ]);
 
-
     const [timeAllowedHours, setTimeAllowedHours] = useState<ISettingsPointer[]>([
         {
-            value: Math.floor(initialBlockedWebsiteData.timeAllowed / 3600),
+            value: Math.floor(initialBlockedWebsiteData.timeAllowed[selectedDay] / 3600),
             radius: 12,
             bgColor: "#fff",
             bgColorSelected: '#eee',
@@ -84,6 +88,112 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
             ]]
     );
 
+    const [scheduleDaysArray, setScheduleDaysArray] = useState<boolean[][]>(
+        initialScheduleEnabled && initialBlockedWebsiteData.scheduledBlockRanges.length
+            ? initialBlockedWebsiteData.scheduledBlockRanges.map(range => range.days)
+            : [[true, true, true, true, true, true, true]]
+    );
+
+    const handleVariableScheduleEnabledChange = (checked: boolean) => {
+        if (!checked) {
+            setSelectedDay(0);
+
+            setTimeAllowedMinutes([
+                {
+                    value: Math.floor(timeAllowed[1] % 3600 / 60),
+                    radius: 12,
+                    bgColor: "#fff",
+                    bgColorSelected: '#eee',
+                }
+            ]);
+            setTimeAllowedHours([
+                {
+                    value: Math.floor(timeAllowed[1] / 3600),
+                    radius: 12,
+                    bgColor: "#fff",
+                    bgColorSelected: '#eee',
+                }
+            ]);
+            setTimeAllowed(
+                {
+                    0: timeAllowed[1],
+                    1: timeAllowed[1],
+                    2: timeAllowed[1],
+                    3: timeAllowed[1],
+                    4: timeAllowed[1],
+                    5: timeAllowed[1],
+                    6: timeAllowed[1]
+                }
+            );
+        }
+
+        setIsVariableScheduleEnabled(checked);
+    };
+
+    const handleVariableDayDisabled = (disable: boolean) => {
+        if (disable) {
+            const newTimeAllowed = { ...timeAllowed };
+            newTimeAllowed[selectedDay] = -1;
+            setTimeAllowed(newTimeAllowed);
+        } else {
+            const newTimeAllowed = { ...timeAllowed };
+            newTimeAllowed[selectedDay] = 300;
+            setTimeAllowed(newTimeAllowed);
+            setTimeAllowedMinutes([
+                {
+                    value: Math.floor(300 % 3600 / 60),
+                    radius: 12,
+                    bgColor: "#fff",
+                    bgColorSelected: '#eee',
+                }
+            ]);
+            setTimeAllowedHours([
+                {
+                    value: Math.floor(300 / 3600),
+                    radius: 12,
+                    bgColor: "#fff",
+                    bgColorSelected: '#eee',
+                }
+            ]);
+        }
+    };
+
+    const handleMinutesChange = (value: ISettingsPointer[]) => {
+        if (isVariableScheduleEnabled) {
+            const currentTimeAllowed = timeAllowed[selectedDay]
+            const newTimeAllowed = { ...timeAllowed };
+            newTimeAllowed[selectedDay] = value[0].value as number * 60 + (currentTimeAllowed - currentTimeAllowed % 3600);
+            setTimeAllowed(newTimeAllowed);
+        } else {
+            const currentTimeAllowed = timeAllowed[selectedDay]
+            const newTimeAllowed = { ...timeAllowed };
+            for (let day = 0; day < 7; day++) {
+                newTimeAllowed[day] = value[0].value as number * 60 + Math.floor(currentTimeAllowed / 3600);
+            }
+            setTimeAllowed(newTimeAllowed);
+        }
+
+        setTimeAllowedMinutes(value);
+    };
+
+    const handleHoursChange = (value: ISettingsPointer[]) => {
+        if (isVariableScheduleEnabled) {
+            const currentTimeAllowed = timeAllowed[selectedDay]
+            const newTimeAllowed = { ...timeAllowed };
+            newTimeAllowed[selectedDay] = (value[0].value as number * 3600) + (currentTimeAllowed % 3600);
+            setTimeAllowed(newTimeAllowed);
+        }
+        else {
+            const currentTimeAllowed = timeAllowed[selectedDay]
+            const newTimeAllowed = { ...timeAllowed };
+            for (let day = 0; day < 7; day++) {
+                newTimeAllowed[day] = (value[0].value as number * 3600) + (currentTimeAllowed % 3600);
+            }
+            setTimeAllowed(newTimeAllowed);
+        }
+        setTimeAllowedHours(value);
+    }
+
     // Method to add new intervals
     const addScheduleRange = () => {
         setScheduleTimesArray(prev => [
@@ -93,11 +203,13 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                 { value: 660, radius: 12, bgColor: "#fff", bgColorSelected: '#eee' }
             ]
         ]);
+        setScheduleDaysArray(prev => [...prev, [true, true, true, true, true, true, true]]);
     };
 
     // Method to remove intervals
     const removeScheduleRange = (index: number) => {
         setScheduleTimesArray(prev => prev.filter((_, i) => i !== index));
+        setScheduleDaysArray(prev => prev.filter((_, i) => i !== index));
     };
 
     // Handle resizing of the circular sliders
@@ -129,8 +241,9 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
     const addBlockedWebsite = () => {
         let blockedWebsite = new BlockedWebsite(
             websiteValue,
-            (timeAllowedMinutes[0].value as number * 60) + (timeAllowedHours[0].value as number * 3600),
+            timeAllowed,
             isIncognitoEnabled,
+            isVariableScheduleEnabled,
             redirectValue
         );
 
@@ -165,9 +278,10 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
         }
 
         if (isScheduleEnabled) {
-            blockedWebsite.scheduledBlockRanges = scheduleTimesArray.map(pair => ({
+            blockedWebsite.scheduledBlockRanges = scheduleTimesArray.map((pair, idx) => ({
                 start: (pair[0].value as number + 360) % 1440,
                 end: (pair[1].value as number + 360) % 1440,
+                days: scheduleDaysArray[idx]
             }));
         }
 
@@ -234,54 +348,100 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                 {!isValidWebsite && <p className="text-red-500 text-sm mt-2">Invalid URL</p>}
             </div>
 
-            <div className="mt-5 flex items-center" >
-                <Label htmlFor="name"> Time Allowed Per Day </Label>
-                <TooltipProvider>
-                    <Tooltip delayDuration={0}>
-                        <TooltipTrigger asChild >
-                            <button className="flex items-center justify-center ml-2 rounded-full" >
-                                <Info className="w-4 h-4 text-chart-5" />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                            When this time is up, the website will be blocked for the rest of the day. <br /> Set to 00:00 to block the website completely.
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
+            <div className="mt-5 flex items-center justify-between max-w-[250px]">
+                <div className="flex items-center">
+                    <Label htmlFor="variable-schedule-enabled">Variable Schedule</Label>
+                    <TooltipProvider>
+                        <Tooltip delayDuration={0}>
+                            <TooltipTrigger asChild >
+                                <button className="flex items-center justify-center ml-2 rounded-full" >
+                                    <Info className="w-4 h-4 text-chart-5" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-primary text-foreground p-2 rounded" >
+                                Adjust the schedule for specific days of the week.
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </div>
+                <Switch
+                    className="ml-2"
+                    id="variable-schedule-enabled"
+                    checked={isVariableScheduleEnabled}
+                    onCheckedChange={handleVariableScheduleEnabledChange}
+                />
             </div>
+            {isVariableScheduleEnabled && (
 
-            <div className="mx-14">
-                <div ref={parentRef} className="w-full relative">
-                    <RoundSlider
-                        pointers={timeAllowedMinutes}
-                        onChange={setTimeAllowedMinutes}
-                        hideText={true}
-                        pathRadius={pathRadius}
-                        pathStartAngle={270}
-                        pathEndAngle={269.999}
-                        pathThickness={12}
-                        pathBgColor={secondaryColor}
-                        connectionBgColor={primaryColor}
-                        pointerBgColor={"#fff"}
-                        pointerBgColorSelected={"#fff"}
-                        min={0}
-                        max={59}
-                    />
-                    <div style={{
-                        position: "absolute",
-                        top: "20px",
-                        left: "20px",
-                        clipPath: `circle(${pathRadius - 8}px at 50% 50%)`,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                    }}>
+                <div className="flex flex-wrap justify-center my-5">
+                    {Array.from({ length: 7 }, (_, i) => {
+                        const dayIndex = i; // Adjust the index to start from 1
+                        return (
+                            <div key={dayIndex} className="flex flex-col items-center mx-1">
+                                <div
+                                    className={
+                                        dayIndex === selectedDay
+                                            ? "w-8 h-8 m-1 flex items-center justify-center rounded-full cursor-pointer bg-primary text-muted-foreground select-none"
+                                            : "w-8 h-8 m-1 flex items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"
+                                    }
+                                    onClick={() => {
+                                        setSelectedDay(dayIndex);
+                                        setTimeAllowedMinutes([
+                                            {
+                                                value: Math.floor(timeAllowed[dayIndex] % 3600 / 60),
+                                                radius: 12,
+                                                bgColor: "#fff",
+                                                bgColorSelected: '#eee',
+                                            }
+                                        ]);
+                                        setTimeAllowedHours([
+                                            {
+                                                value: Math.floor(timeAllowed[dayIndex] / 3600),
+                                                radius: 12,
+                                                bgColor: "#fff",
+                                                bgColorSelected: '#eee',
+                                            }
+                                        ]);
+                                    }}
+                                >
+                                    {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
+                                </div>
+                                <div className="mt-1 text-sm">
+                                    {timeDisplayFormat(timeAllowed[dayIndex], true)}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+            )}
+
+            {!isVariableScheduleEnabled && (
+                <div className="mt-5 flex items-center" >
+                    <Label htmlFor="name">  Time Allowed Per Day </Label>
+                    <TooltipProvider>
+                        <Tooltip delayDuration={0}>
+                            <TooltipTrigger asChild >
+                                <button className="flex items-center justify-center ml-2 rounded-full" >
+                                    <Info className="w-4 h-4 text-chart-5" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-primary text-foreground p-2 rounded " >
+                                When this time is up, the website will be blocked for the rest of the day. <br /> Set to 00:00 to block the website completely.
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </div>
+            )}
+
+            {timeAllowed[selectedDay] !== -1 && (
+                <div className="mx-14">
+                    <div ref={parentRef} className="w-full relative">
                         <RoundSlider
-                            pointers={timeAllowedHours}
-                            onChange={setTimeAllowedHours}
+                            pointers={timeAllowedMinutes}
+                            onChange={handleMinutesChange}
                             hideText={true}
-                            pathRadius={pathRadius - 20}
+                            pathRadius={pathRadius}
                             pathStartAngle={270}
                             pathEndAngle={269.999}
                             pathThickness={12}
@@ -290,65 +450,108 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                             pointerBgColor={"#fff"}
                             pointerBgColorSelected={"#fff"}
                             min={0}
-                            max={10}
+                            max={59}
                         />
-                    </div>
-                    <div className="" style={{
-                        position: "absolute",
-                        top: "45%",
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                    }}>
-                        <div className="flex items-center">
-                            <div>
-                                <label className="flex items-center">
-                                    <Input
-                                        className='w-12 no-arrows text-center'
-                                        type="number"
-                                        style={{ MozAppearance: 'textfield' }}
-                                        value={String(timeAllowedHours[0].value).padStart(2, '0')}
-                                        onChange={(e) => setTimeAllowedHours([{ value: Math.min(Number(e.target.value), 10) }])}
-                                        min={0}
-                                        max={10}
-                                        onFocus={(e) => e.target.select()}
-                                    />
-                                    <div className='ml-1'>
-                                        hours
-                                    </div>
-                                </label>
-                            </div>
-                            <div className='ml-2'>
-                                <label className="flex items-center">
-                                    <Input
-                                        className='w-12 no-arrows text-center'
-                                        type="number"
-                                        style={{ MozAppearance: 'textfield' }}
-                                        value={String(timeAllowedMinutes[0].value).padStart(2, '0')}
-                                        onChange={(e) => setTimeAllowedMinutes([{ value: Math.min(Number(e.target.value), 59) }])}
-                                        min={0}
-                                        max={59}
-                                        onFocus={(e) => e.target.select()}
-                                    />
-                                    <div className='ml-1'>
-                                        mins
-                                    </div>
-                                </label>
-                            </div>
+                        <div style={{
+                            position: "absolute",
+                            top: "20px",
+                            left: "20px",
+                            clipPath: `circle(${pathRadius - 8}px at 50% 50%)`,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}>
+                            <RoundSlider
+                                pointers={timeAllowedHours}
+                                onChange={handleHoursChange}
+                                hideText={true}
+                                pathRadius={pathRadius - 20}
+                                pathStartAngle={270}
+                                pathEndAngle={269.999}
+                                pathThickness={12}
+                                pathBgColor={secondaryColor}
+                                connectionBgColor={primaryColor}
+                                pointerBgColor={"#fff"}
+                                pointerBgColorSelected={"#fff"}
+                                min={0}
+                                max={10}
+                            />
                         </div>
-                        {timeAllowedHours[0].value === 0 && timeAllowedMinutes[0].value === 0 && (
-                            <div className='mt-3'>
-                                <Label>Blocked</Label>
+                        <div className="" style={{
+                            position: "absolute",
+                            top: "45%",
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}>
+                            <div className="flex items-center">
+                                <div>
+                                    <label className="flex items-center">
+                                        <Input
+                                            className='w-12 no-arrows text-center'
+                                            type="number"
+                                            style={{ MozAppearance: 'textfield' }}
+                                            value={String(timeAllowedHours[0].value).padStart(2, '0')}
+                                            onChange={(e) => handleHoursChange([{ value: Math.min(Number(e.target.value), 10) }])}
+                                            min={0}
+                                            max={10}
+                                            onFocus={(e) => e.target.select()}
+                                        />
+                                        <div className='ml-1'>
+                                            hours
+                                        </div>
+                                    </label>
+                                </div>
+                                <div className='ml-2'>
+                                    <label className="flex items-center">
+                                        <Input
+                                            className='w-12 no-arrows text-center'
+                                            type="number"
+                                            style={{ MozAppearance: 'textfield' }}
+                                            value={String(timeAllowedMinutes[0].value).padStart(2, '0')}
+                                            onChange={(e) => handleMinutesChange([{ value: Math.min(Number(e.target.value), 59) }])}
+                                            min={0}
+                                            max={59}
+                                            onFocus={(e) => e.target.select()}
+                                        />
+                                        <div className='ml-1'>
+                                            mins
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
-                        )}
+                            {timeAllowedHours[0].value === 0 && timeAllowedMinutes[0].value === 0 && (
+                                <div className='mt-3'>
+                                    <Label>Blocked</Label>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
-            <div className="mt-8">
+            {isVariableScheduleEnabled && (
+                <div className='mt-5 flex items-center justify-center'>
+                    {
+                        timeAllowed[selectedDay] === -1 ? (
+                            <>
+                                <Button onClick={() => handleVariableDayDisabled(false)}>Enable on {numberToDay(selectedDay)}s</Button>
+                            </>
+                        ) : (
+                            <>
+                                <Button onClick={() => handleVariableDayDisabled(true)}>Disable on {numberToDay(selectedDay)}s</Button>
+                            </>
+                        )
+                    }
+                </div >
+            )
+            }
+
+            <div className="mt-5">
                 <div className="flex items-center justify-between max-w-[250px]" >
                     <div className="flex items-center" >
                         <Label htmlFor="redirect-enabled"> Redirect </Label>
@@ -445,31 +648,32 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                     isScheduleEnabled && (
                         <>
                             {scheduleTimesArray.map((pair, index) => (
-                                <div key={index} className="mx-14 mt-5 relative">
-                                    {/* RoundSlider for each pair */}
-                                    <RoundSlider
-                                        pointers={pair}
-                                        onChange={(updated) => {
-                                            setScheduleTimesArray(prev => {
-                                                const copy = [...prev];
-                                                copy[index] = updated;
-                                                return copy;
-                                            });
-                                        }}
-                                        hideText={true}
-                                        pathRadius={pathRadius}
-                                        pathThickness={12}
-                                        pathBgColor={secondaryColor}
-                                        connectionBgColor={primaryColor}
-                                        pointerBgColor={"#fff"}
-                                        pointerBgColorSelected={"#fff"}
-                                        min={0}
-                                        max={1440}
-                                    />
+                                <div key={index} className="mx-14 mb-5 mt-3 relative">
+                                    <div className='left-[17px] relative'>
+                                        <RoundSlider
+                                            pointers={pair}
+                                            onChange={(updated) => {
+                                                setScheduleTimesArray(prev => {
+                                                    const copy = [...prev];
+                                                    copy[index] = updated;
+                                                    return copy;
+                                                });
+                                            }}
+                                            hideText={true}
+                                            pathRadius={pathRadius - 20}
+                                            pathThickness={12}
+                                            pathBgColor={secondaryColor}
+                                            connectionBgColor={primaryColor}
+                                            pointerBgColor={"#fff"}
+                                            pointerBgColorSelected={"#fff"}
+                                            min={0}
+                                            max={1440}
+                                        />
+                                    </div>
                                     <div
                                         style={{
                                             position: "absolute",
-                                            top: "28%",
+                                            top: "22%",
                                             left: "50%",
                                             transform: "translateX(-50%)",
                                             display: "flex",
@@ -479,7 +683,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                         }}
                                     >
                                         <div>
-                                            <div className='mb-1'>Start Time</div>
+                                            <div className='mb-2'>Block From</div>
                                             <div className="flex items-center">
                                                 <label className="flex items-center">
                                                     <Input
@@ -524,7 +728,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                                     />
                                                 </label>
                                             </div>
-                                            <div className='mt-4 mb-1'>End Time</div>
+                                            <div className='mt-2 mb-2'>Until</div>
                                             <div className="flex items-center">
                                                 <label className="flex items-center">
                                                     <Input
@@ -571,15 +775,63 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                             </div>
                                         </div>
                                     </div>
+
+                                    <div className="flex flex-wrap justify-center mt-2 ml-5">
+                                        {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'].map((label, i) => {
+                                            const isActive = scheduleDaysArray[index][i];
+                                            return (
+                                                <div key={i} className="relative flex flex-col items-center">
+                                                    <div
+                                                        className={
+                                                            isActive
+                                                                ? "w-8 h-8 m-1 flex items-center justify-center rounded-full cursor-pointer bg-primary text-muted-foreground select-none"
+                                                                : "w-8 h-8 m-1 flex items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"
+                                                        }
+                                                        onClick={() => {
+                                                            const newDays = [...scheduleDaysArray[index]];
+                                                            newDays[i] = !newDays[i];
+                                                            setScheduleDaysArray(prev => {
+                                                                const copy = [...prev];
+                                                                copy[index] = newDays;
+                                                                return copy;
+                                                            });
+                                                        }}
+                                                    >
+                                                        {label}
+                                                    </div>
+                                                    {isActive ? (
+                                                        <Check className="w-4 h-4 text-muted-foreground mt" />
+                                                    ) : (
+                                                        <X className="w-4 h-4 text-muted-foreground mt" />
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                        <div className='mt-3'>
+                                            <TooltipProvider>
+                                                <Tooltip delayDuration={0}>
+                                                    <TooltipTrigger asChild >
+                                                        <button className="flex items-center justify-center ml-2 rounded-full" >
+                                                            <Info className="w-4 h-4 text-chart-5" />
+                                                        </button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent className="bg-primary text-foreground p-2 rounded border-1" >
+                                                        Select the days of the week this interval applies to.
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        </div>
+                                    </div>
+
                                     {index > 0 && (
-                                        <div className='w-full text-center mt-5'>
+                                        <div className='w-full text-center mt-3'>
                                             <Button onClick={() => removeScheduleRange(index)}> <X className='h-5 w-5 mr-1' /> Remove Interval</Button>
                                         </div>
                                     )}
                                 </div>
                             ))}
-                            <div className='w-full text-center mt-2'>
-                                <Button className="mt-2" onClick={addScheduleRange}> <Plus className='h-5 w-5 mr-1' />  Add Interval</Button>
+                            <div className='w-full text-center '>
+                                <Button className="" onClick={addScheduleRange}> <Plus className='h-5 w-5 mr-1' />  Additional Interval</Button>
                             </div>
                         </>
                     )}

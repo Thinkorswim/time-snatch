@@ -80,8 +80,14 @@ export const timeDisplayFormatBadge = (time: number) => {
   return timeString
 }
 
-export const timeDisplayFormat = (time: number) => {
-  if (time <= 0) return "Blocked"
+export const timeDisplayFormat = (time: number, isVariable: boolean = false) => {
+  if (time <= 0) {
+    if (isVariable) {
+      return "Day Off"
+    } else {
+      return "Blocked"
+    }
+  }
 
   const { hours, minutes, seconds } = convertSecondsToHoursMinutesSeconds(time)
   let timeString = ""
@@ -97,7 +103,6 @@ export const timeDisplayFormat = (time: number) => {
 
   return timeString
 }
-
 
 export const scheduledBlockDisplay = (range: { start: number, end: number }) => {
         
@@ -141,4 +146,25 @@ export const encryptPassword = async (plainText: string) => {
 export const compareEncrypted = async (plainText: string, hashedValue: string) => {
   const possibleHash = await encryptPassword(plainText);
   return possibleHash === hashedValue;
+};
+
+export const numberToDay = (day: number) => {
+  switch (day) {
+    case 0:
+      return "Monday";
+    case 1:
+      return "Tuesday";
+    case 2:
+      return "Wednesday";
+    case 3:
+      return "Thursday";
+    case 4:
+      return "Friday";
+    case 5:
+      return "Saturday";
+    case 6:
+      return "Sunday";
+    default:
+      return "";
+  }
 };

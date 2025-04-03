@@ -10,8 +10,6 @@ import {
 } from "@/components/ui/table"
 import { Pencil, Trash2 } from "lucide-react";
 
-
-
 type BlockedWebsitesTableProps = {
     blockedWebsites: Record<string, BlockedWebsite>;
     deleteBlockedWebsite: (websiteName: string) => void;
@@ -19,6 +17,8 @@ type BlockedWebsitesTableProps = {
 };
 
 export const BlockedWebsitesTable: React.FC<BlockedWebsitesTableProps> = ({ blockedWebsites, deleteBlockedWebsite, editBlockedWebsite }) => {
+
+    const dayOfTheWeek = (new Date().getDay() + 6) % 7;
 
     return (
         <Table>
@@ -42,15 +42,60 @@ export const BlockedWebsitesTable: React.FC<BlockedWebsitesTableProps> = ({ bloc
                 {Object.entries(blockedWebsites).map(([key, website]) => (
                     <TableRow key={key}>
                         <TableCell className="font-medium">{website.website}</TableCell>
-                        <TableCell>{timeDisplayFormat(website.timeAllowed)}</TableCell>
-                        <TableCell>{timeDisplayFormat(website.timeAllowed - website.totalTime)}</TableCell>
+                        <TableCell className={website.variableSchedule ? "flex max-w-[260px] flex-wrap items-center" : ""}>
+                            {website.variableSchedule ? (
+                                Array.from({ length: 7 }, (_, i) => {
+                                    const dayIndex = i; // Adjust the index to start from 1
+                                    return (
+                                        <div key={dayIndex} className="flex flex-col items-center mx-1 mt-1">
+                                            <div
+                                                className={
+                                                    dayIndex === dayOfTheWeek
+                                                        ? "w-16 h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-primary text-muted-foreground select-none"
+                                                        : "w-16 h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"
+                                                }
+                                            >
+                                                {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
+                                                <div className="text-[0.8rem]">
+                                                    {timeDisplayFormat(website.timeAllowed[dayIndex], true)}
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    );
+                                })
+
+                            ) : (
+                                timeDisplayFormat(website.timeAllowed[0])
+                            )}
+                        </TableCell>
+                        <TableCell>{timeDisplayFormat(website.timeAllowed[dayOfTheWeek] - website.totalTime)}</TableCell>
                         <TableCell>{website.redirectUrl == "" ? "Inspiration" : website.redirectUrl}</TableCell>
                         <TableCell>{website.blockIncognito ? "Yes" : "No"}</TableCell>
                         <TableCell>
                             {website.scheduledBlockRanges.length === 0 && "None"}
                             {website.scheduledBlockRanges.map((range, index) => (
-                                <div key={index}>
+                                <div key={index} className={index !== website.scheduledBlockRanges.length - 1 ? "mb-5" : ""}>
                                     {scheduledBlockDisplay(range)}
+                                    <div className="flex max-w-[130px] flex-wrap items-center">
+                                        {range.days.every(day => day) ? (
+                                            <div className="text-muted-foreground">Every Day</div>
+                                        ) : (
+                                            Array.from({ length: 7 }, (_, i) => (
+                                                <div key={i} className="flex flex-col items-center">
+                                                    <div
+                                                        className={
+                                                            range.days[i]
+                                                                ? "w-7 h-7 mr-1 mt-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-primary text-muted-foreground select-none"
+                                                                : "w-7 h-7 mr-1 mt-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"
+                                                        }
+                                                    >
+                                                        {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </TableCell>

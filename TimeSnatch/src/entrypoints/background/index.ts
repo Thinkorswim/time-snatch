@@ -45,6 +45,7 @@ export default defineBackground(() => {
                                         timeAllowed: item.timeTotal,
                                         totalTime: item.timeDay,
                                         blockIncognito: item.blockIncognito,
+                                        variableSchedule: false,
                                         redirectUrl: "",
                                         lastAccessedDate: new Date().toLocaleDateString('en-CA').slice(0, 10),
                                         scheduledBlockRanges: []
@@ -73,6 +74,16 @@ export default defineBackground(() => {
                     for (const website in blockedWebsitesList) {
                         if (blockedWebsitesList.hasOwnProperty(website)) {
                             newBlockedWebsitesList[extractHostnameAndDomain(website)!] = blockedWebsitesList[website];
+                        }
+
+                        newBlockedWebsitesList[extractHostnameAndDomain(website)!].timeAllowed = {
+                            0: blockedWebsitesList[website].timeAllowed,
+                            1: blockedWebsitesList[website].timeAllowed,
+                            2: blockedWebsitesList[website].timeAllowed,
+                            3: blockedWebsitesList[website].timeAllowed,
+                            4: blockedWebsitesList[website].timeAllowed,
+                            5: blockedWebsitesList[website].timeAllowed,
+                            6: blockedWebsitesList[website].timeAllowed,
                         }
                     }
 
@@ -190,6 +201,11 @@ export default defineBackground(() => {
                 let currentBlockedWebsite = blockedWebsites[currentTabUrl];
                 if (!currentBlockedWebsite) return;
 
+                // Check what day of the week it is 
+                const day = new Date().getDay();
+                if (currentBlockedWebsite.blockedDays.includes(day)) return;
+
+
                 // Check if it is an incognito tab
                 if (currentBlockedWebsite.blockIncognito == false && tab.incognito == true) return;
 
@@ -239,10 +255,11 @@ export default defineBackground(() => {
 
     const updateTime = (blockedWebsite: BlockedWebsite | null, globalTimeBudget: GlobalTimeBudget | null, tab: chrome.tabs.Tab) => {
         if (blockedWebsite) {
+            const dayOfTheWeek = (new Date().getDay() + 6) % 7;
             blockedWebsite.totalTime += 1;
-            setBadge(timeDisplayFormatBadge(blockedWebsite.timeAllowed - blockedWebsite.totalTime));
+            setBadge(timeDisplayFormatBadge(blockedWebsite.timeAllowed[dayOfTheWeek] - blockedWebsite.totalTime));
             storeData(blockedWebsite.website, blockedWebsite.totalTime);
-            if (blockedWebsite.totalTime >= blockedWebsite.timeAllowed) {
+            if (blockedWebsite.totalTime >= blockedWebsite.timeAllowed[dayOfTheWeek]) {
                 clearInterval(activeBlockTimer!);
                 redirectToUrl(blockedWebsite.redirectUrl, tab.id!);
             }
