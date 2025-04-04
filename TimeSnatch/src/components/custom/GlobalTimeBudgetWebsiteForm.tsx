@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Info } from "lucide-react";
 import { Button } from '@/components/ui/button';
-import { validateURL, extractHostnameAndDomain } from '@/lib/utils';
+import { validateURL, extractHostnameAndDomain, hasSubdomain, extractHighLevelDomain } from '@/lib/utils';
 import { GlobalTimeBudget } from '@/models/GlobalTimeBudget';
 
 interface GlobalTimeBudgetWebsiteFormProps {
@@ -13,6 +13,7 @@ interface GlobalTimeBudgetWebsiteFormProps {
 
 export const GlobalTimeBudgetWebsiteForm: React.FC<GlobalTimeBudgetWebsiteFormProps> = ({ callback }) => {
     const [websiteValue, setWebsiteValue] = useState("");
+    const [websiteSubDomainInfo, setWebsiteSubDomainInfo] = useState<React.ReactNode>(null);
     const [isValidWebsite, setIsValidWebsite] = useState(true);
 
     const websiteInputRef = useRef<HTMLInputElement | null>(null);
@@ -49,8 +50,22 @@ export const GlobalTimeBudgetWebsiteForm: React.FC<GlobalTimeBudgetWebsiteFormPr
                 return;
             }
         }
-
     };
+
+    const handleWebsiteInput = (e: React.FocusEvent<HTMLInputElement>) => {
+        const inputValue = e.target.value;
+        setWebsiteValue(inputValue);
+        const domain = extractHostnameAndDomain(inputValue);
+        if (inputValue && hasSubdomain(inputValue)) {
+            setWebsiteSubDomainInfo(
+                <>
+                    This action will only apply to <span className='font-bold'>{domain}</span> but not all <span className='font-bold'>{extractHighLevelDomain(inputValue)}</span> sites.
+                </>
+            );
+        } else {
+            setWebsiteSubDomainInfo(null);
+        }
+    }
 
     return (
         <div className="w-[99%] mx-auto">
@@ -76,7 +91,7 @@ export const GlobalTimeBudgetWebsiteForm: React.FC<GlobalTimeBudgetWebsiteFormPr
                     id="websiteName"
                     value={websiteValue}
                     placeholder="Enter website URL"
-                    onChange={(e) => setWebsiteValue(e.target.value)}
+                    onChange={handleWebsiteInput}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                             addGlobalTimeBudgetWebsite(); // Trigger the button click action
@@ -84,6 +99,7 @@ export const GlobalTimeBudgetWebsiteForm: React.FC<GlobalTimeBudgetWebsiteFormPr
                     }}
                 />
                 {!isValidWebsite && <p className="text-red-500 text-sm mt-2">Invalid URL</p>}
+                {websiteSubDomainInfo && <p className="text-sm mt-2">{websiteSubDomainInfo}</p>}
             </div>
 
             <div className='w-full text-right mb-2'>
