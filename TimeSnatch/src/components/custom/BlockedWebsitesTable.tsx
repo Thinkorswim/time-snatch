@@ -69,7 +69,9 @@ export const BlockedWebsitesTable: React.FC<BlockedWebsitesTableProps> = ({ bloc
                                 timeDisplayFormat(website.timeAllowed[0])
                             )}
                         </TableCell>
-                        <TableCell>{timeDisplayFormat(website.timeAllowed[dayOfTheWeek] - website.totalTime)}</TableCell>
+                        <TableCell>
+                            {website.timeAllowed[dayOfTheWeek] == -1 ? "Day Off" : timeDisplayFormat(website.timeAllowed[dayOfTheWeek] - website.totalTime)}
+                        </TableCell>
                         <TableCell>{website.redirectUrl == "" ? "Inspiration" : website.redirectUrl}</TableCell>
                         <TableCell>{website.blockIncognito ? "Yes" : "No"}</TableCell>
                         <TableCell>

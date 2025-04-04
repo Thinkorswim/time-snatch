@@ -42,7 +42,15 @@ export default defineBackground(() => {
                                 if (url) {
                                     newBlockedList[url] = BlockedWebsite.fromJSON({
                                         website: url,
-                                        timeAllowed: item.timeTotal,
+                                        timeAllowed: {
+                                            0: item.timeDay,
+                                            1: item.timeDay,
+                                            2: item.timeDay,
+                                            3: item.timeDay,
+                                            4: item.timeDay,
+                                            5: item.timeDay,
+                                            6: item.timeDay,
+                                        },
                                         totalTime: item.timeDay,
                                         blockIncognito: item.blockIncognito,
                                         variableSchedule: false,
@@ -76,14 +84,26 @@ export default defineBackground(() => {
                             newBlockedWebsitesList[extractHostnameAndDomain(website)!] = blockedWebsitesList[website];
                         }
 
-                        newBlockedWebsitesList[extractHostnameAndDomain(website)!].timeAllowed = {
-                            0: blockedWebsitesList[website].timeAllowed,
-                            1: blockedWebsitesList[website].timeAllowed,
-                            2: blockedWebsitesList[website].timeAllowed,
-                            3: blockedWebsitesList[website].timeAllowed,
-                            4: blockedWebsitesList[website].timeAllowed,
-                            5: blockedWebsitesList[website].timeAllowed,
-                            6: blockedWebsitesList[website].timeAllowed,
+                        // Check if the websites uses the new type of timeAllowed
+                        if (blockedWebsitesList[website].timeAllowed && typeof blockedWebsitesList[website].timeAllowed !== 'object') {
+                            newBlockedWebsitesList[extractHostnameAndDomain(website)!].timeAllowed = {
+                                0: blockedWebsitesList[website].timeAllowed,
+                                1: blockedWebsitesList[website].timeAllowed,
+                                2: blockedWebsitesList[website].timeAllowed,
+                                3: blockedWebsitesList[website].timeAllowed,
+                                4: blockedWebsitesList[website].timeAllowed,
+                                5: blockedWebsitesList[website].timeAllowed,
+                                6: blockedWebsitesList[website].timeAllowed,
+                            }
+                        }
+
+                        // Make all scheduledBlockRanges have days field
+                        if (blockedWebsitesList[website].scheduledBlockRanges && blockedWebsitesList[website].scheduledBlockRanges.length > 0) {
+                            blockedWebsitesList[website].scheduledBlockRanges.forEach((range: { start: number; end: number; days?: boolean[] }) => {
+                                if (!range.days) {
+                                    range.days = [true, true, true, true, true, true, true];
+                                }
+                            });
                         }
                     }
 
@@ -202,9 +222,8 @@ export default defineBackground(() => {
                 if (!currentBlockedWebsite) return;
 
                 // Check what day of the week it is 
-                const day = new Date().getDay();
-                if (currentBlockedWebsite.blockedDays.includes(day)) return;
-
+                const dayOfTheWeek = (new Date().getDay() + 6) % 7;
+                if (currentBlockedWebsite.timeAllowed[dayOfTheWeek] == -1) return;
 
                 // Check if it is an incognito tab
                 if (currentBlockedWebsite.blockIncognito == false && tab.incognito == true) return;
@@ -213,7 +232,7 @@ export default defineBackground(() => {
                 if (currentBlockedWebsite.scheduledBlockRanges.length > 0) checkScheduledBlock(currentBlockedWebsite.scheduledBlockRanges, currentBlockedWebsite.redirectUrl, tab);
 
                 // Check if time has expired
-                if (currentBlockedWebsite.totalTime >= currentBlockedWebsite.timeAllowed) {
+                if (currentBlockedWebsite.totalTime >= currentBlockedWebsite.timeAllowed[dayOfTheWeek]) {
                     redirectToUrl(currentBlockedWebsite.redirectUrl, tab.id!);
                     return;
                 }
@@ -233,7 +252,7 @@ export default defineBackground(() => {
                     if (activeBlockTimer == null) activeBlockTimer = setInterval(() => updateTime(currentBlockedWebsite!, null, tab), 1000);
                 }
 
-                setBadge(timeDisplayFormatBadge(currentBlockedWebsite.timeAllowed - currentBlockedWebsite.totalTime))
+                setBadge(timeDisplayFormatBadge(currentBlockedWebsite.timeAllowed[dayOfTheWeek] - currentBlockedWebsite.totalTime))
 
             } else if (isUrlInGlobalList) {
                 // Check if the current time is in a global scheduled block time
@@ -285,12 +304,16 @@ export default defineBackground(() => {
         }
     }
 
-    const checkScheduledBlock = (scheduledBlockRanges: Array<{ start: number; end: number }>, redirectUrl: string, tab: chrome.tabs.Tab) => {
+    const checkScheduledBlock = (scheduledBlockRanges: Array<{ start: number; end: number, days: boolean[] }>, redirectUrl: string, tab: chrome.tabs.Tab) => {
         const currentTime = new Date();
+        const dayOfTheWeek = (currentTime.getDay() + 6) % 7;
         const currentTimestamp = currentTime.getHours() * 60 + currentTime.getMinutes();
 
+        // exclude the current day if it is not in the scheduled block range
+        const filteredScheduledBlockRanges = scheduledBlockRanges.filter((range) => range.days[dayOfTheWeek] == true);
+
         if (
-            scheduledBlockRanges.some(
+            filteredScheduledBlockRanges.some(
                 (range) => isWithinScheduledBlock(range, currentTimestamp)
             )
         ) {

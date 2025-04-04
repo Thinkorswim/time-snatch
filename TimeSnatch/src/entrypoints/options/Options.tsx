@@ -225,6 +225,19 @@ function Options() {
     });
   }, []);
 
+  // Refresh the blocked websites list and global time budget when the window gains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      refreshBlockedWebsitesList();
+      refreshGlobalTimeBudget();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, []);
+
   return (
     <>
       <div className='px-10 flex flex-col min-h-screen max-w-screen-lg mx-auto font-geist'>
