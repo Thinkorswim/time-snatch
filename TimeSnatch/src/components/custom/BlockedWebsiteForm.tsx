@@ -101,7 +101,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
 
             setTimeAllowedMinutes([
                 {
-                    value: Math.floor(timeAllowed[1] % 3600 / 60),
+                    value: Math.floor(timeAllowed[0] % 3600 / 60),
                     radius: 12,
                     bgColor: "#fff",
                     bgColorSelected: '#eee',
@@ -109,7 +109,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
             ]);
             setTimeAllowedHours([
                 {
-                    value: Math.floor(timeAllowed[1] / 3600),
+                    value: Math.floor(timeAllowed[0] / 3600),
                     radius: 12,
                     bgColor: "#fff",
                     bgColorSelected: '#eee',
@@ -117,13 +117,13 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
             ]);
             setTimeAllowed(
                 {
-                    0: timeAllowed[1],
-                    1: timeAllowed[1],
-                    2: timeAllowed[1],
-                    3: timeAllowed[1],
-                    4: timeAllowed[1],
-                    5: timeAllowed[1],
-                    6: timeAllowed[1]
+                    0: timeAllowed[0],
+                    1: timeAllowed[0],
+                    2: timeAllowed[0],
+                    3: timeAllowed[0],
+                    4: timeAllowed[0],
+                    5: timeAllowed[0],
+                    6: timeAllowed[0]
                 }
             );
         }
@@ -389,8 +389,8 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                     onCheckedChange={handleVariableScheduleEnabledChange}
                 />
             </div>
-            {isVariableScheduleEnabled && (
 
+            {isVariableScheduleEnabled && (
                 <div className="flex flex-wrap justify-center my-5">
                     {Array.from({ length: 7 }, (_, i) => {
                         const dayIndex = i; // Adjust the index to start from 1
@@ -431,7 +431,6 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                         );
                     })}
                 </div>
-
             )}
 
             {!isVariableScheduleEnabled && (
@@ -566,8 +565,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                         )
                     }
                 </div >
-            )
-            }
+            )}
 
             <div className="mt-5">
                 <div className="flex items-center justify-between max-w-[250px]" >

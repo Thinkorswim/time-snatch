@@ -16,7 +16,8 @@ export default defineBackground(() => {
             if (!data.globalTimeBudget) {
                 const globalTimeBudget = new GlobalTimeBudget(
                     new Set(),
-                    0,
+                    { 0: 300, 1: 300, 2: 300, 3: 300, 4: 300, 5: 300, 6: 300 },
+                    false,
                     false,
                     "",
                     new Date().toLocaleDateString('en-CA').slice(0, 10),
@@ -27,7 +28,6 @@ export default defineBackground(() => {
             }
 
             if (object.reason === 'update') {
-
                 // Handle legacy data
                 browser.storage.sync.get(['blockList'], (data_blocked) => {
                     const blockedList = data_blocked.blockList
@@ -85,7 +85,7 @@ export default defineBackground(() => {
                         }
 
                         // Check if the websites uses the new type of timeAllowed
-                        if (blockedWebsitesList[website].timeAllowed && typeof blockedWebsitesList[website].timeAllowed !== 'object') {
+                        if (typeof blockedWebsitesList[website].timeAllowed !== 'object') {
                             newBlockedWebsitesList[extractHostnameAndDomain(website)!].timeAllowed = {
                                 0: blockedWebsitesList[website].timeAllowed,
                                 1: blockedWebsitesList[website].timeAllowed,
@@ -110,6 +110,23 @@ export default defineBackground(() => {
                     browser.storage.local.set({ blockedWebsitesList: newBlockedWebsitesList });
                 });
 
+                
+                console.log("Migrated blocked websites list to new format.");
+
+                if (typeof data.globalTimeBudget.timeAllowed !== 'object') {
+                    console.log("Migrated global time budget to new format.");
+                    data.globalTimeBudget.timeAllowed = {
+                        0: data.globalTimeBudget.timeAllowed,
+                        1: data.globalTimeBudget.timeAllowed,
+                        2: data.globalTimeBudget.timeAllowed,
+                        3: data.globalTimeBudget.timeAllowed,
+                        4: data.globalTimeBudget.timeAllowed,
+                        5: data.globalTimeBudget.timeAllowed,
+                        6: data.globalTimeBudget.timeAllowed,
+                    }
+
+                    browser.storage.local.set({ globalTimeBudget: data.globalTimeBudget });
+                }
             }
         });
     });
@@ -216,13 +233,13 @@ export default defineBackground(() => {
             const isUrlInBlockedList = Object.hasOwn(blockedWebsites, currentTabUrl);
 
             if (!isUrlInBlockedList && !isUrlInGlobalList) return;
+            // Check what day of the week it is 
+            const dayOfTheWeek = (new Date().getDay() + 6) % 7;
 
             if (isUrlInBlockedList) {
                 let currentBlockedWebsite = blockedWebsites[currentTabUrl];
                 if (!currentBlockedWebsite) return;
 
-                // Check what day of the week it is 
-                const dayOfTheWeek = (new Date().getDay() + 6) % 7;
                 if (currentBlockedWebsite.timeAllowed[dayOfTheWeek] == -1) return;
 
                 // Check if it is an incognito tab
@@ -237,12 +254,12 @@ export default defineBackground(() => {
                     return;
                 }
 
-                if (isUrlInGlobalList) {
+                if (isUrlInGlobalList && globalTimeBudget.timeAllowed[dayOfTheWeek] != -1) {
                     // Check if the current time is in a global scheduled block time
                     if (globalTimeBudget.scheduledBlockRanges.length > 0) checkScheduledBlock(globalTimeBudget.scheduledBlockRanges, globalTimeBudget.redirectUrl, tab);
 
                     // Check if global time has expired
-                    if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed) {
+                    if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
                         redirectToUrl(globalTimeBudget.redirectUrl, tab.id!);
                         return;
                     }
@@ -255,17 +272,19 @@ export default defineBackground(() => {
                 setBadge(timeDisplayFormatBadge(currentBlockedWebsite.timeAllowed[dayOfTheWeek] - currentBlockedWebsite.totalTime))
 
             } else if (isUrlInGlobalList) {
+                if (globalTimeBudget.timeAllowed[dayOfTheWeek] == -1) return;
+
                 // Check if the current time is in a global scheduled block time
                 if (globalTimeBudget.scheduledBlockRanges.length > 0) checkScheduledBlock(globalTimeBudget.scheduledBlockRanges, globalTimeBudget.redirectUrl, tab);
 
                 // Check if global time has expired
-                if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed) {
+                if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
                     redirectToUrl(globalTimeBudget.redirectUrl, tab.id!);
                     return;
                 }
 
                 if (activeBlockTimer == null) activeBlockTimer = setInterval(() => updateTime(null, globalTimeBudget, tab), 1000);
-                setBadge(timeDisplayFormatBadge(globalTimeBudget.timeAllowed - globalTimeBudget.totalTime));
+                setBadge(timeDisplayFormatBadge(globalTimeBudget.timeAllowed[dayOfTheWeek] - globalTimeBudget.totalTime));
             }
 
         });
@@ -273,8 +292,9 @@ export default defineBackground(() => {
 
 
     const updateTime = (blockedWebsite: BlockedWebsite | null, globalTimeBudget: GlobalTimeBudget | null, tab: chrome.tabs.Tab) => {
+        const dayOfTheWeek = (new Date().getDay() + 6) % 7;
+
         if (blockedWebsite) {
-            const dayOfTheWeek = (new Date().getDay() + 6) % 7;
             blockedWebsite.totalTime += 1;
             setBadge(timeDisplayFormatBadge(blockedWebsite.timeAllowed[dayOfTheWeek] - blockedWebsite.totalTime));
             storeData(blockedWebsite.website, blockedWebsite.totalTime);
@@ -287,17 +307,17 @@ export default defineBackground(() => {
                 globalTimeBudget.totalTime += 1;
                 storeGlobalData(globalTimeBudget.totalTime);
 
-                if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed) {
+                if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
                     clearInterval(activeBlockTimer!);
                     redirectToUrl(globalTimeBudget.redirectUrl, tab.id!);
                 }
             }
         } else if (globalTimeBudget) {
             globalTimeBudget.totalTime += 1;
-            setBadge(timeDisplayFormatBadge(globalTimeBudget.timeAllowed - globalTimeBudget.totalTime));
+            setBadge(timeDisplayFormatBadge(globalTimeBudget.timeAllowed[dayOfTheWeek] - globalTimeBudget.totalTime));
             storeGlobalData(globalTimeBudget.totalTime);
 
-            if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed) {
+            if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
                 clearInterval(activeBlockTimer!);
                 redirectToUrl(globalTimeBudget.redirectUrl, tab.id!);
             }

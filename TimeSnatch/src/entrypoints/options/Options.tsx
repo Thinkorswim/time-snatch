@@ -71,7 +71,7 @@ function Options() {
     const randomIndex = Math.floor(Math.random() * ctaDiscordTexts.length);
     setCtaDiscordTexts(ctaDiscordTexts[randomIndex]);
   };
-  
+
   const refreshBlockedWebsitesList = () => {
     setIsWebsiteDialogOpen(false);
     setBlockedWebsite(null);
@@ -203,6 +203,8 @@ function Options() {
       }
     });
   }
+
+  const dayOfTheWeek = (new Date().getDay() + 6) % 7;
 
   useEffect(() => {
     // Select a random text for the CTA Discord
@@ -340,36 +342,59 @@ function Options() {
 
                 </div>
 
-                <div className='mt-8 flex items-center w-full'>
-                  <div className='flex items-center w-full'>
-                    <Card className="">
+                <div className='mt-8 flex items-stretch w-full'>
+                  <div className='flex items-stretch w-full'>
+                    <Card >
                       <CardHeader className="p-5">
                         <CardTitle>Allowed Per Day</CardTitle>
                       </CardHeader>
-                      <CardContent className="p-5 pt-0">
-                        <div className='text-2xl font-medium text-muted-foreground'> {globalTimeBudget ? timeDisplayFormat(globalTimeBudget?.timeAllowed) : "00:00"} </div>
+                      <CardContent className="p-5 pt-0 flex flex-wrap max-w-[360px]">
+                        {globalTimeBudget?.variableSchedule ? (
+                          Array.from({ length: 7 }, (_, i) => {
+                            const dayIndex = i; // Adjust the index to start from 1
+                            return (
+                              <div key={dayIndex} className="flex flex-col items-center mx-1 mt-1">
+                                <div
+                                  className={
+                                    dayIndex === dayOfTheWeek
+                                      ? "w-16 h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-primary text-muted-foreground select-none"
+                                      : "w-16 h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"
+                                  }
+                                >
+                                  {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
+                                  <div className="text-[0.8rem]">
+                                    {timeDisplayFormat(globalTimeBudget.timeAllowed[dayIndex], true)}
+                                  </div>
+                                </div>
+
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className='text-2xl font-medium text-muted-foreground'> {globalTimeBudget ? timeDisplayFormat(globalTimeBudget?.timeAllowed[0]) : "00:00"} </div>
+                        )}
                       </CardContent>
                     </Card>
 
-                    <Card className="ml-5">
+                    <Card className="ml-5 flex-1">
                       <CardHeader className="p-5">
                         <CardTitle>Time Left Today</CardTitle>
                       </CardHeader>
                       <CardContent className="p-5 pt-0">
-                        <div className='text-2xl font-medium text-muted-foreground'> {globalTimeBudget ? timeDisplayFormat(globalTimeBudget?.timeAllowed - globalTimeBudget?.totalTime) : "00:00"} </div>
+                        <div className='text-2xl font-medium text-muted-foreground'> {globalTimeBudget ? timeDisplayFormat(globalTimeBudget?.timeAllowed[dayOfTheWeek] - globalTimeBudget?.totalTime) : "00:00"} </div>
                       </CardContent>
                     </Card>
 
-                    <Card className="ml-5">
+                    <Card className="ml-5 flex-1">
                       <CardHeader className="p-5">
-                        <CardTitle>Redirect</CardTitle>
+                        <CardTitle>Custom Redirect when Blocked</CardTitle>
                       </CardHeader>
                       <CardContent className="p-5 pt-0">
                         <div className='text-2xl font-medium text-muted-foreground'> {globalTimeBudget ? (globalTimeBudget.redirectUrl == "" ? "Inspiration" : globalTimeBudget.redirectUrl) : "Inspiration"} </div>
                       </CardContent>
                     </Card>
 
-                    <Card className="ml-5">
+                    <Card className="ml-5 flex-1">
                       <CardHeader className="p-5">
                         <CardTitle>Block in Incognito</CardTitle>
                       </CardHeader>
@@ -382,12 +407,31 @@ function Options() {
                       <CardHeader className="p-5">
                         <CardTitle>Scheduled Block</CardTitle>
                       </CardHeader>
-                      <CardContent className="p-5 pt-0">
-                        <div className='text-2xl font-medium text-muted-foreground'>
-                          {globalTimeBudget ? (globalTimeBudget.scheduledBlockRanges.length === 0 ? "None" : "") : ""}
-                          {globalTimeBudget && globalTimeBudget.scheduledBlockRanges.map((range, index) => (
-                            <div key={index}>
+                      <CardContent className="p-5 pt-0 flex flex-wrap">
+                        <div className='text-lg font-medium text-muted-foreground'>
+                          {globalTimeBudget?.scheduledBlockRanges.length === 0 && "None"}
+                          {globalTimeBudget?.scheduledBlockRanges.map((range, index) => (
+                            <div key={index} className={index !== globalTimeBudget?.scheduledBlockRanges.length - 1 ? "mb-5" : ""}>
                               {scheduledBlockDisplay(range)}
+                              <div className="flex flex-wrap items-center text-sm font-normal">
+                                {range.days.every(day => day) ? (
+                                  <div className="text-muted-foreground">Every Day</div>
+                                ) : (
+                                  Array.from({ length: 7 }, (_, i) => (
+                                    <div key={i} className="flex flex-col items-center">
+                                      <div
+                                        className={
+                                          range.days[i]
+                                            ? "w-7 h-7 mr-1 mt-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-primary text-muted-foreground select-none"
+                                            : "w-7 h-7 mr-1 mt-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"
+                                        }
+                                      >
+                                        {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>

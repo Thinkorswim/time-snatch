@@ -43,7 +43,7 @@ const Progress = React.forwardRef<
           <div className="absolute inset-0 flex items-center justify-between px-4 text-sm font-normal text-muted-foreground">
             <div> {blockedWebsite.website}</div>
             {blockedWebsite.timeAllowed[dayOfTheWeek] == -1 ? (
-              <div> Day Off</div>
+              <div>Day Off</div>
             ) : (
               <div> {timeDisplayFormat(blockedWebsite.timeAllowed[dayOfTheWeek] - blockedWebsite.totalTime)}</div>
             )}

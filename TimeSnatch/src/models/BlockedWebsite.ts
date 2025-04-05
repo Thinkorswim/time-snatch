@@ -3,15 +3,7 @@ export class BlockedWebsite {
 
   constructor(
     public website: string,
-    public timeAllowed: { [key: string]: number } = {
-      0: 0,
-      1: 0,
-      2: 0,
-      3: 0,
-      4: 0,
-      5: 0,
-      6: 0,
-    },
+    public timeAllowed: { [key: string]: number },
     public blockIncognito: boolean,
     public variableSchedule: boolean = false,
     public redirectUrl: string,

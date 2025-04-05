@@ -64,7 +64,6 @@ export const BlockedWebsitesTable: React.FC<BlockedWebsitesTableProps> = ({ bloc
                                         </div>
                                     );
                                 })
-
                             ) : (
                                 timeDisplayFormat(website.timeAllowed[0])
                             )}

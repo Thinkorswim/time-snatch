@@ -128,12 +128,13 @@ export const timeDisplayFormatBadge = (time: number) => {
 }
 
 export const timeDisplayFormat = (time: number, isVariable: boolean = false) => {
-  if (time <= 0) {
-    if (isVariable) {
-      return "Day Off"
-    } else {
-      return "Blocked"
+  if (isVariable) {
+    if (time <= 0) {
+      if (time == 0) return "Blocked"
+      else return "Day Off"
     }
+  } else {
+    if (time <= 0) return "Blocked"
   }
 
   const { hours, minutes, seconds } = convertSecondsToHoursMinutesSeconds(time)
