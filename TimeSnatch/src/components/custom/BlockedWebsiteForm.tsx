@@ -355,7 +355,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                     <Info className="w-4 h-4 text-chart-5" />
                                 </button>
                             </TooltipTrigger>
-                            <TooltipContent className="bg-primary text-foreground p-2 rounded " >
+                            <TooltipContent className="bg-primary text-foreground p-2 rounded" >
                                 The website URL you want to block (e.g. https://facebook.com).
                             </TooltipContent>
                         </Tooltip>
