@@ -236,10 +236,10 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
         }
 
         if (isScheduleEnabled) {
-            globalTimeBudget.scheduledBlockRanges = scheduleTimesArray.map(pair => ({
+            globalTimeBudget.scheduledBlockRanges = scheduleTimesArray.map((pair, idx) => ({
                 start: (pair[0].value as number + 360) % 1440,
                 end: (pair[1].value as number + 360) % 1440,
-                days: scheduleDaysArray[0]
+                days: scheduleDaysArray[idx]
             }));
         }
 
@@ -355,100 +355,101 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                 </div>
             )}
 
-
-            <div className="mx-14">
-                <div ref={parentRef} className="w-full relative">
-                    <RoundSlider
-                        pointers={timeAllowedMinutes}
-                        onChange={handleMinutesChange}
-                        hideText={true}
-                        pathRadius={pathRadius}
-                        pathStartAngle={270}
-                        pathEndAngle={269.999}
-                        pathThickness={12}
-                        pathBgColor={secondaryColor}
-                        connectionBgColor={primaryColor}
-                        min={0}
-                        max={59}
-                    />
-                    <div style={{
-                        position: "absolute",
-                        top: "20px",
-                        left: "20px",
-                        clipPath: `circle(${pathRadius - 8}px at 50% 50%)`,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                    }}>
+            {timeAllowed[selectedDay] !== -1 && (
+                <div className="mx-14">
+                    <div ref={parentRef} className="w-full relative">
                         <RoundSlider
-                            pointers={timeAllowedHours}
-                            onChange={handleHoursChange}
+                            pointers={timeAllowedMinutes}
+                            onChange={handleMinutesChange}
                             hideText={true}
-                            pathRadius={pathRadius - 20}
+                            pathRadius={pathRadius}
                             pathStartAngle={270}
                             pathEndAngle={269.999}
                             pathThickness={12}
                             pathBgColor={secondaryColor}
                             connectionBgColor={primaryColor}
                             min={0}
-                            max={10}
+                            max={59}
                         />
-                    </div>
-                    <div className="" style={{
-                        position: "absolute",
-                        top: "45%",
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                    }}>
-                        <div className="flex items-center">
-                            <div>
-                                <label className="flex items-center">
-                                    <Input
-                                        className='w-12 no-arrows text-center'
-                                        style={{ MozAppearance: 'textfield' }}
-                                        type="number"
-                                        value={String(timeAllowedHours[0].value).padStart(2, '0')}
-                                        onChange={(e) => handleHoursChange([{ value: Math.min(Number(e.target.value), 10) }])}
-                                        min={0}
-                                        max={10}
-                                        onFocus={(e) => e.target.select()}
-                                    />
-                                    <div className='ml-1'>
-                                        hours
-                                    </div>
-                                </label>
-                            </div>
-                            <div className='ml-2'>
-                                <label className="flex items-center">
-                                    <Input
-                                        className='w-12 no-arrows text-center'
-                                        style={{ MozAppearance: 'textfield' }}
-                                        type="number"
-                                        value={String(timeAllowedMinutes[0].value).padStart(2, '0')}
-                                        onChange={(e) => handleMinutesChange([{ value: Math.min(Number(e.target.value), 59) }])}
-                                        min={0}
-                                        max={59}
-                                        onFocus={(e) => e.target.select()}
-                                    />
-                                    <div className='ml-1'>
-                                        mins
-                                    </div>
-                                </label>
-                            </div>
+                        <div style={{
+                            position: "absolute",
+                            top: "20px",
+                            left: "20px",
+                            clipPath: `circle(${pathRadius - 8}px at 50% 50%)`,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}>
+                            <RoundSlider
+                                pointers={timeAllowedHours}
+                                onChange={handleHoursChange}
+                                hideText={true}
+                                pathRadius={pathRadius - 20}
+                                pathStartAngle={270}
+                                pathEndAngle={269.999}
+                                pathThickness={12}
+                                pathBgColor={secondaryColor}
+                                connectionBgColor={primaryColor}
+                                min={0}
+                                max={10}
+                            />
                         </div>
-                        {timeAllowedHours[0].value === 0 && timeAllowedMinutes[0].value === 0 && (
-                            <div className='mt-3'>
-                                <Label>Blocked</Label>
+                        <div className="" style={{
+                            position: "absolute",
+                            top: "45%",
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}>
+                            <div className="flex items-center">
+                                <div>
+                                    <label className="flex items-center">
+                                        <Input
+                                            className='w-12 no-arrows text-center'
+                                            style={{ MozAppearance: 'textfield' }}
+                                            type="number"
+                                            value={String(timeAllowedHours[0].value).padStart(2, '0')}
+                                            onChange={(e) => handleHoursChange([{ value: Math.min(Number(e.target.value), 10) }])}
+                                            min={0}
+                                            max={10}
+                                            onFocus={(e) => e.target.select()}
+                                        />
+                                        <div className='ml-1'>
+                                            hours
+                                        </div>
+                                    </label>
+                                </div>
+                                <div className='ml-2'>
+                                    <label className="flex items-center">
+                                        <Input
+                                            className='w-12 no-arrows text-center'
+                                            style={{ MozAppearance: 'textfield' }}
+                                            type="number"
+                                            value={String(timeAllowedMinutes[0].value).padStart(2, '0')}
+                                            onChange={(e) => handleMinutesChange([{ value: Math.min(Number(e.target.value), 59) }])}
+                                            min={0}
+                                            max={59}
+                                            onFocus={(e) => e.target.select()}
+                                        />
+                                        <div className='ml-1'>
+                                            mins
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
-                        )}
+                            {timeAllowedHours[0].value === 0 && timeAllowedMinutes[0].value === 0 && (
+                                <div className='mt-3'>
+                                    <Label>Blocked</Label>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {isVariableScheduleEnabled && (
                 <div className='mt-5 flex items-center justify-center'>
