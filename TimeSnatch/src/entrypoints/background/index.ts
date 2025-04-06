@@ -114,7 +114,6 @@ export default defineBackground(() => {
                 console.log("Migrated blocked websites list to new format.");
 
                 if (typeof data.globalTimeBudget.timeAllowed !== 'object') {
-                    console.log("Migrated global time budget to new format.");
                     data.globalTimeBudget.timeAllowed = {
                         0: data.globalTimeBudget.timeAllowed,
                         1: data.globalTimeBudget.timeAllowed,
@@ -123,6 +122,14 @@ export default defineBackground(() => {
                         4: data.globalTimeBudget.timeAllowed,
                         5: data.globalTimeBudget.timeAllowed,
                         6: data.globalTimeBudget.timeAllowed,
+                    }
+
+                    if (data.globalTimeBudget.scheduledBlockRanges && data.globalTimeBudget.scheduledBlockRanges.length > 0) {
+                        data.globalTimeBudget.scheduledBlockRanges.forEach((range: { start: number; end: number; days?: boolean[] }) => {
+                            if (!range.days) {
+                                range.days = [true, true, true, true, true, true, true];
+                            }
+                        });
                     }
 
                     browser.storage.local.set({ globalTimeBudget: data.globalTimeBudget });
