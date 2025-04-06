@@ -348,7 +348,7 @@ function Options() {
                       <CardHeader className="p-5">
                         <CardTitle>Allowed Per Day</CardTitle>
                       </CardHeader>
-                      <CardContent className="p-5 pt-0 flex flex-wrap max-w-[360px]">
+                      <CardContent className={globalTimeBudget?.variableSchedule ? "p-5 pt-0 flex flex-wrap w-[280px]" : "p-5 pt-0 flex flex-wrap"}>
                         {globalTimeBudget?.variableSchedule ? (
                           Array.from({ length: 7 }, (_, i) => {
                             const dayIndex = i; // Adjust the index to start from 1
