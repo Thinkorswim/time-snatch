@@ -19,7 +19,7 @@ The "Read your browsing history" permission is needed to check whether the curre
 ## Install Locally (Chrome)
 
 1. Download the latest .zip file version from [https://github.com/Thinkorswim/time-snatch/releases/tag/release](https://github.com/Thinkorswim/time-snatch/releases/tag/release)
-2. Unzip the file and you should have a folder `time-snatch`
+2. Unzip the file and you should have a folder `time-snatch-chrome`
 3. Move the folder to a permanent location on your computer (do not delete the folder after installation).
 4. Go to the extensions page: chrome://extensions
 5. Enable Developer Mode (toggle "Developer mode" at the top-right corner)
