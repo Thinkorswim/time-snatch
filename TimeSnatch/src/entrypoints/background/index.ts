@@ -332,8 +332,11 @@ export default defineBackground(() => {
                     dailyStatistics['restrictedTimePerDay'][blockedWebsite.website] = dailyStatistics['restrictedTimePerDay'][blockedWebsite.website] || 0;
                     dailyStatistics['restrictedTimePerDay'][blockedWebsite.website] += 1;
                 } else {
-                    dailyStatistics['restrictedTimePerDay']['Global Budget'] = dailyStatistics['restrictedTimePerDay']['Global Budget'] || 0;
-                    dailyStatistics['restrictedTimePerDay']['Global Budget'] += 1;
+                    let currentUrl = extractHostnameAndDomain(tab.url!);
+                    if (currentUrl) {
+                        dailyStatistics['restrictedTimePerDay'][currentUrl] = dailyStatistics['restrictedTimePerDay'][currentUrl] || 0;
+                        dailyStatistics['restrictedTimePerDay'][currentUrl] += 1;
+                    }
                 }
 
                 browser.storage.local.set({ dailyStatistics: dailyStatistics });
