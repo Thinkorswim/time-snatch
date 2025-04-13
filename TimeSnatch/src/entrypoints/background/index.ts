@@ -8,9 +8,31 @@ export default defineBackground(() => {
             browser.runtime.openOptionsPage();
         }
 
-        browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget'], (data) => {
+        browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget', 'dailyStatistics', 'historicalRestrictedTimePerDay', 'historicalBlockedPerDay'], (data) => {
             if (!data.blockedWebsitesList) {
                 browser.storage.local.set({ blockedWebsitesList: {} });
+            }
+
+            if (!data.historicalBlockedPerDay) {
+                const historicalBlockedPerDay = {}
+
+                browser.storage.local.set({ historicalBlockedPerDay });
+            }
+
+            if (!data.historicalRestrictedTimePerDay) {
+                const historicalRestrictedTimePerDay = {}
+
+                browser.storage.local.set({ historicalRestrictedTimePerDay });
+            }
+
+            if (!data.dailyStatistics) {
+                const dailyStatistics = {
+                    blockedPerDay: {},
+                    restrictedTimePerDay: {},
+                    day: new Date().toLocaleDateString('en-CA').slice(0, 10),
+                };
+
+                browser.storage.local.set({ dailyStatistics });
             }
 
             if (!data.globalTimeBudget) {
@@ -111,8 +133,6 @@ export default defineBackground(() => {
                 });
 
                 
-                console.log("Migrated blocked websites list to new format.");
-
                 if (typeof data.globalTimeBudget.timeAllowed !== 'object') {
                     data.globalTimeBudget.timeAllowed = {
                         0: data.globalTimeBudget.timeAllowed,
@@ -210,6 +230,7 @@ export default defineBackground(() => {
         }, 200); // Adjust delay as needed
     };
 
+    
 
     const checkUrlBlockStatus = (tab: chrome.tabs.Tab) => {
         browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget'], (data) => {
@@ -230,7 +251,10 @@ export default defineBackground(() => {
 
             if (globalTimeBudget && globalTimeBudget.lastAccessedDate !== today) {
                 globalTimeBudget.lastAccessedDate = today;
+                globalTimeBudget.totalTime = 0;
                 browser.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() })
+
+                updateHistoricalData();
             }
 
             const currentTabUrl = extractHostnameAndDomain(tab.url!);
@@ -257,7 +281,7 @@ export default defineBackground(() => {
 
                 // Check if time has expired
                 if (currentBlockedWebsite.totalTime >= currentBlockedWebsite.timeAllowed[dayOfTheWeek]) {
-                    redirectToUrl(currentBlockedWebsite.redirectUrl, tab.id!);
+                    redirectToUrl(currentBlockedWebsite.redirectUrl, tab.id!, currentTabUrl);
                     return;
                 }
 
@@ -267,7 +291,7 @@ export default defineBackground(() => {
 
                     // Check if global time has expired
                     if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
-                        redirectToUrl(globalTimeBudget.redirectUrl, tab.id!);
+                        redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget");
                         return;
                     }
 
@@ -286,7 +310,7 @@ export default defineBackground(() => {
 
                 // Check if global time has expired
                 if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
-                    redirectToUrl(globalTimeBudget.redirectUrl, tab.id!);
+                    redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget");
                     return;
                 }
 
@@ -300,6 +324,21 @@ export default defineBackground(() => {
 
     const updateTime = (blockedWebsite: BlockedWebsite | null, globalTimeBudget: GlobalTimeBudget | null, tab: chrome.tabs.Tab) => {
         const dayOfTheWeek = (new Date().getDay() + 6) % 7;
+        
+        browser.storage.local.get(['dailyStatistics'], (data) => {
+            if (data.dailyStatistics) {
+                const dailyStatistics = data.dailyStatistics;
+                if (blockedWebsite?.website) {
+                    dailyStatistics['restrictedTimePerDay'][blockedWebsite.website] = dailyStatistics['restrictedTimePerDay'][blockedWebsite.website] || 0;
+                    dailyStatistics['restrictedTimePerDay'][blockedWebsite.website] += 1;
+                } else {
+                    dailyStatistics['restrictedTimePerDay']['Global Budget'] = dailyStatistics['restrictedTimePerDay']['Global Budget'] || 0;
+                    dailyStatistics['restrictedTimePerDay']['Global Budget'] += 1;
+                }
+
+                browser.storage.local.set({ dailyStatistics: dailyStatistics });
+            }
+        });
 
         if (blockedWebsite) {
             blockedWebsite.totalTime += 1;
@@ -307,7 +346,7 @@ export default defineBackground(() => {
             storeData(blockedWebsite.website, blockedWebsite.totalTime);
             if (blockedWebsite.totalTime >= blockedWebsite.timeAllowed[dayOfTheWeek]) {
                 clearInterval(activeBlockTimer!);
-                redirectToUrl(blockedWebsite.redirectUrl, tab.id!);
+                redirectToUrl(blockedWebsite.redirectUrl, tab.id!, blockedWebsite.website);
             }
 
             if (globalTimeBudget) {
@@ -316,7 +355,7 @@ export default defineBackground(() => {
 
                 if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
                     clearInterval(activeBlockTimer!);
-                    redirectToUrl(globalTimeBudget.redirectUrl, tab.id!);
+                    redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget");
                 }
             }
         } else if (globalTimeBudget) {
@@ -326,7 +365,7 @@ export default defineBackground(() => {
 
             if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
                 clearInterval(activeBlockTimer!);
-                redirectToUrl(globalTimeBudget.redirectUrl, tab.id!);
+                redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget");
             }
         }
     }
@@ -344,7 +383,7 @@ export default defineBackground(() => {
                 (range) => isWithinScheduledBlock(range, currentTimestamp)
             )
         ) {
-            redirectToUrl(redirectUrl, tab.id!);
+            redirectToUrl(redirectUrl, tab.id!, extractHostnameAndDomain(tab.url!)!);
             return;
         }
     }
@@ -357,7 +396,17 @@ export default defineBackground(() => {
         return currentTimestamp >= range.start && currentTimestamp < range.end;
     }
 
-    const redirectToUrl = (url: string, tabId: number) => {
+    const redirectToUrl = (url: string, tabId: number, website: string = "Others") => {
+        browser.storage.local.get(['dailyStatistics'], (data) => {
+            if (data.dailyStatistics) {
+                const dailyStatistics = data.dailyStatistics;
+                dailyStatistics['blockedPerDay'][website] = dailyStatistics['blockedPerDay'][website] || 0;
+                dailyStatistics['blockedPerDay'][website] += 1;
+                
+                browser.storage.local.set({ dailyStatistics: dailyStatistics });
+            }
+        });
+
         if (url == "") {
             browser.tabs.update(tabId, { "url": browser.runtime.getURL('/inspiration.html') });
         } else {
@@ -378,7 +427,25 @@ export default defineBackground(() => {
         }
 
         browser.storage.local.set({ blockedWebsitesList: blockedWebsites })
+        updateHistoricalData();
     }
+
+
+    const updateHistoricalData = () => {
+        browser.storage.local.get(['historicalRestrictedTimePerDay', 'historicalBlockedPerDay', 'dailyStatistics'], (data) => {
+          const dailyStatistics = data.dailyStatistics;
+          const historicalRestrictedTimePerDay = data.historicalRestrictedTimePerDay;
+          const historicalBlockedPerDay = data.historicalBlockedPerDay;
+      
+          historicalBlockedPerDay[dailyStatistics.day] = dailyStatistics.blockedPerDay;
+          historicalRestrictedTimePerDay[dailyStatistics.day] = dailyStatistics.restrictedTimePerDay;
+      
+          dailyStatistics.blockedPerDay = {};
+          dailyStatistics.restrictedTimePerDay = {};
+          dailyStatistics.day = new Date().toLocaleDateString('en-CA').slice(0, 10);
+          browser.storage.local.set({ dailyStatistics: dailyStatistics, historicalBlockedPerDay: historicalBlockedPerDay, historicalRestrictedTimePerDay: historicalRestrictedTimePerDay });
+        });
+      }
 
 
     const storeData = (websiteName: string, totalTime: number) => {

@@ -8,7 +8,7 @@ You can limit the amount of time you can spend on distracting websites or outrig
 
 Time Snatch is lightweight, reliable and secure. It gives you the flexibility to block and manage each website individually.
 
-The "Read your browsing history" permission is needed to check whether the current website you are visiting matches any of the ones you have blocked. The extension never saves, sends or uses any of this information for other purposes.
+The extension never saves, sends or uses any of your information for purposes other than its core functionality.
 
 ## Install from Web Store
 
