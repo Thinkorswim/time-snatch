@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProgressGlobal } from '@/components/ui/progress-global'
-import { Cog, ShieldBan, Component} from 'lucide-react'
+import { Cog, ShieldBan, Component, ChartNoAxesColumn } from 'lucide-react'
 import { storage } from 'wxt/storage';
 
 
@@ -22,9 +22,15 @@ function Popup() {
   const [isHighlighted, setIsHighlighted] = useState(false);
   const [activeTab, setActiveTab] = useState('blockedWebsites');
 
+  const openStatisticsPage = () => {
+    const url = browser.runtime.getURL('/options.html?section=statistics');
+    browser.tabs.create({ url });
+  }
+
+
   useEffect(() => {
     browser.runtime.connect();
-    
+
     // Retrieve the list of blocked websites from storage
     browser.storage.local.get(["blockedWebsitesList", "globalTimeBudget"], (data) => {
       if (data.blockedWebsitesList) {
@@ -66,6 +72,7 @@ function Popup() {
           </div>
         </div>
         <div className='flex items-center justify-end'>
+          <ChartNoAxesColumn className='w-5 h-5 text-chart-1 cursor-pointer mr-2' onClick={openStatisticsPage} />
           <Cog className='w-5 h-5 text-chart-1 cursor-pointer' onClick={() => browser.runtime.openOptionsPage()} />
         </div>
       </div>

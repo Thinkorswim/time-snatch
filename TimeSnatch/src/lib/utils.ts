@@ -88,7 +88,6 @@ export const hasSubdomain = (url: string | null): boolean => {
 export function convertSecondsToHoursMinutes(seconds: number): { hours: number; minutes: number } {
   if (seconds < 0) return { hours: 0, minutes: 0 };
 
-
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
 
@@ -127,14 +126,16 @@ export const timeDisplayFormatBadge = (time: number) => {
   return timeString
 }
 
-export const timeDisplayFormat = (time: number, isVariable: boolean = false) => {
-  if (isVariable) {
-    if (time <= 0) {
-      if (time == 0) return "Blocked"
-      else return "Day Off"
+export const timeDisplayFormat = (time: number, isVariable: boolean = false, isChart: boolean = false) => {
+  if (!isChart) {
+    if (isVariable) {
+      if (time <= 0) {
+        if (time == 0) return "Blocked"
+        else return "Day Off"
+      }
+    } else {
+      if (time <= 0) return "Blocked"
     }
-  } else {
-    if (time <= 0) return "Blocked"
   }
 
   const { hours, minutes, seconds } = convertSecondsToHoursMinutesSeconds(time)

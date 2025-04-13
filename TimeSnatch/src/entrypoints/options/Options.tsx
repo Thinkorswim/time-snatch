@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Plus, Pencil, Info, ShieldBan, Component, Activity, Dot, UserCog, Settings } from 'lucide-react'
+import { Plus, Pencil, Info, ShieldBan, Component, Activity, Dot, UserCog, Settings, ChartNoAxesColumn } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -31,6 +31,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PasswordProtection } from './PasswordProtection';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { RestrictedPerDayChart } from './RestrictedPerDayChart';
+import { BlockedPerDayChart } from './BlockedPerDayChart';
 
 function Options() {
   const [isAddWebsiteDialogOpen, setIsWebsiteDialogOpen] = useState(false);
@@ -52,6 +54,21 @@ function Options() {
   const [passwordAction, setPasswordAction] = useState<{ function: (...args: any[]) => void; params: any[]; } | null>(null);
   const [passwordCheck, setPasswordCheck] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+
+  const [activeTab, setActiveTab] = useState("blockedWebsites");
+  const [historicalRestrictedTimePerDay, setHistoricalRestrictedTimePerDay] = useState<Record<string, Record<string, number>>>({});
+  const [historicalBlockedPerDay, setHistoricalBlockedPerDay] = useState<Record<string, Record<string, number>>>({});
+
+
+  // on load set the active tab to the one that was last open
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const section = params.get('section');
+    if (section && section == "statistics") {
+      setActiveTab("statistics");
+      handleStatisticsLoad();
+    }
+  }, []);
 
   // Define the list of texts
   const ctaDiscordTexts: string[] = [
@@ -240,20 +257,39 @@ function Options() {
     };
   }, []);
 
+  // load historical data on statistics click
+  const handleStatisticsLoad = () => {
+    browser.storage.local.get(['dailyStatistics', 'historicalRestrictedTimePerDay', 'historicalBlockedPerDay'], (data) => {
+      const dailyStatistics = data.dailyStatistics;
+      const historicalRestrictedTimePerDay = data.historicalRestrictedTimePerDay;
+      const historicalBlockedPerDay = data.historicalBlockedPerDay;
+
+      historicalRestrictedTimePerDay[dailyStatistics.day] = dailyStatistics.restrictedTimePerDay;
+      historicalBlockedPerDay[dailyStatistics.day] = dailyStatistics.blockedPerDay;
+
+      browser.storage.local.set({ historicalRestrictedTimePerDay: historicalRestrictedTimePerDay, historicalBlockedPerDay: historicalBlockedPerDay });
+
+      setHistoricalRestrictedTimePerDay(data.historicalRestrictedTimePerDay);
+      setHistoricalBlockedPerDay(data.historicalBlockedPerDay);
+    });
+  }
+
+
   return (
     <>
       <div className='px-10 flex flex-col min-h-screen max-w-screen-lg mx-auto font-geist'>
 
         <div className="flex-grow">
 
-          <Tabs defaultValue="blockedWebsites">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className='mt-8 mb-10 flex items-center'>
               <img src="/images/logo.svg" alt="Logo" className="w-10 h-10 mr-4" />
 
               <TabsList className='py-5 px-2'>
                 <TabsTrigger className='data-[state=active]:shadow-none' value="blockedWebsites"><ShieldBan className='w-5 h-5 mr-1' /> Blocked Websites</TabsTrigger>
                 <TabsTrigger className='data-[state=active]:shadow-none' value="globalTimeBudget"><Component className='w-5 h-5 mr-1' /> Group Time Budget</TabsTrigger>
-                <TabsTrigger className='data-[state=active]:shadow-none' value="settings"><Settings className='w-5 h-5 mr-1' />  Settings</TabsTrigger>
+                <TabsTrigger className='data-[state=active]:shadow-none' value="statistics" onClick={handleStatisticsLoad}><ChartNoAxesColumn className='w-5 h-5 mr-1' /> Statistics </TabsTrigger>
+                <TabsTrigger className='data-[state=active]:shadow-none' value="settings" ><Settings className='w-5 h-5 mr-1' />  Settings</TabsTrigger>
               </TabsList>
             </div>
 
@@ -387,7 +423,7 @@ function Options() {
 
                     <Card className="ml-5 flex-1">
                       <CardHeader className="p-5">
-                        <CardTitle>Custom Redirect when Blocked</CardTitle>
+                        <CardTitle>Redirects to</CardTitle>
                       </CardHeader>
                       <CardContent className="p-5 pt-0">
                         <div className='text-2xl font-medium text-muted-foreground'> {globalTimeBudget ? (globalTimeBudget.redirectUrl == "" ? "Inspiration" : globalTimeBudget.redirectUrl) : "Inspiration"} </div>
@@ -493,6 +529,23 @@ function Options() {
               </Dialog>
             </TabsContent>
 
+            {/* STATISTICS TAB */}
+            <TabsContent value="statistics">
+              <div className='mt-10 mb-5'>
+                <div className='text-3xl font-bold w-full text-muted-foreground'>
+                  Statistics
+                </div>
+                <div className='mt-8 bg-muted/50 p-5 rounded-xl'>
+                  <div className='mb-5'>
+                    <RestrictedPerDayChart historicalRestrictedTimePerDay={historicalRestrictedTimePerDay} />
+                  </div>
+                  <div>
+                    <BlockedPerDayChart historicalBlockedPerDay={historicalBlockedPerDay} />
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
             {/* SETTINGS TAB */}
             <TabsContent value="settings">
               <div className='mt-10 mb-5'>
@@ -500,7 +553,6 @@ function Options() {
                   Settings
                 </div>
                 <div className='mt-8 bg-muted/50 p-5 rounded-xl'>
-
                   <PasswordProtection
                     requirePassword={requirePassword}
                     setRequirePassword={setRequirePassword}
@@ -523,7 +575,7 @@ function Options() {
             </div>
           </div>
         </footer>
-      </div>
+      </div >
 
       <Dialog open={isPasswordEntryDialogOpen} onOpenChange={handlePasswordEntryDialogChange} >
         <DialogContent className="bg-card" >
