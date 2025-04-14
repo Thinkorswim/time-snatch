@@ -32,18 +32,32 @@ function Inspiration() {
     loop: 1
   });
 
+  // State for reason
+  const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setReason(params.get('reason') || '');
+  }, []);
 
   return (
-    <div className="flex h-screen items-center justify-start max-w-screen-lg mx-auto font-geistmono text-4xl text-muted-foreground font-light">
-      <div className="flex flex-col items-center">
-        {quote}
-        {showAuthor && (
-          <div className="flex items-center justify-end mt-5 w-full text-3xl font-extralight">
-            {author}
-          </div>
-        )}
+    <>
+      <div className="flex h-screen items-center justify-start max-w-screen-lg mx-auto font-geistmono text-4xl text-muted-foreground font-light">
+        <div className="flex flex-col items-center">
+          {quote}
+          {showAuthor && (
+            <div className="flex items-center justify-end mt-5 w-full text-3xl font-extralight">
+              {author}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+      {reason && (
+        <div className="absolute bottom-4 right-4 text-base font-geistmono text-muted-foreground">
+          {reason}
+        </div>
+      )}
+    </>
   );
 }
 

@@ -1,6 +1,6 @@
 import { BlockedWebsite } from "@/models/BlockedWebsite";
 import { GlobalTimeBudget } from "@/models/GlobalTimeBudget";
-import { timeDisplayFormatBadge, extractHostnameAndDomain, validateURL } from "@/lib/utils";
+import { timeDisplayFormatBadge, extractHostnameAndDomain, validateURL, scheduledBlockDisplay } from "@/lib/utils";
 
 export default defineBackground(() => {
     browser.runtime.onInstalled.addListener((object) => {
@@ -277,21 +277,21 @@ export default defineBackground(() => {
                 if (currentBlockedWebsite.blockIncognito == false && tab.incognito == true) return;
 
                 // Check if the current time is in a scheduled block time
-                if (currentBlockedWebsite.scheduledBlockRanges.length > 0) checkScheduledBlock(currentBlockedWebsite.scheduledBlockRanges, currentBlockedWebsite.redirectUrl, tab);
+                if (currentBlockedWebsite.scheduledBlockRanges.length > 0) checkScheduledBlock(currentBlockedWebsite.scheduledBlockRanges, currentBlockedWebsite.redirectUrl, tab, false);
 
                 // Check if time has expired
                 if (currentBlockedWebsite.totalTime >= currentBlockedWebsite.timeAllowed[dayOfTheWeek]) {
-                    redirectToUrl(currentBlockedWebsite.redirectUrl, tab.id!, currentTabUrl);
+                    redirectToUrl(currentBlockedWebsite.redirectUrl, tab.id!, currentTabUrl, "Time limit reached on " + currentTabUrl);
                     return;
                 }
 
                 if (isUrlInGlobalList && globalTimeBudget.timeAllowed[dayOfTheWeek] != -1) {
                     // Check if the current time is in a global scheduled block time
-                    if (globalTimeBudget.scheduledBlockRanges.length > 0) checkScheduledBlock(globalTimeBudget.scheduledBlockRanges, globalTimeBudget.redirectUrl, tab);
+                    if (globalTimeBudget.scheduledBlockRanges.length > 0) checkScheduledBlock(globalTimeBudget.scheduledBlockRanges, globalTimeBudget.redirectUrl, tab, true);
 
                     // Check if global time has expired
                     if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
-                        redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget");
+                        redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget", "Time limit reached on your Global Budget (" + currentTabUrl + ")");
                         return;
                     }
 
@@ -306,11 +306,11 @@ export default defineBackground(() => {
                 if (globalTimeBudget.timeAllowed[dayOfTheWeek] == -1) return;
 
                 // Check if the current time is in a global scheduled block time
-                if (globalTimeBudget.scheduledBlockRanges.length > 0) checkScheduledBlock(globalTimeBudget.scheduledBlockRanges, globalTimeBudget.redirectUrl, tab);
+                if (globalTimeBudget.scheduledBlockRanges.length > 0) checkScheduledBlock(globalTimeBudget.scheduledBlockRanges, globalTimeBudget.redirectUrl, tab, true);
 
                 // Check if global time has expired
                 if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
-                    redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget");
+                    redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget", "Time limit reached on your Global Budget (" + currentTabUrl + ")");
                     return;
                 }
 
@@ -324,6 +324,7 @@ export default defineBackground(() => {
 
     const updateTime = (blockedWebsite: BlockedWebsite | null, globalTimeBudget: GlobalTimeBudget | null, tab: chrome.tabs.Tab) => {
         const dayOfTheWeek = (new Date().getDay() + 6) % 7;
+        let currentUrl = extractHostnameAndDomain(tab.url!);
         
         browser.storage.local.get(['dailyStatistics'], (data) => {
             if (data.dailyStatistics) {
@@ -332,7 +333,6 @@ export default defineBackground(() => {
                     dailyStatistics['restrictedTimePerDay'][blockedWebsite.website] = dailyStatistics['restrictedTimePerDay'][blockedWebsite.website] || 0;
                     dailyStatistics['restrictedTimePerDay'][blockedWebsite.website] += 1;
                 } else {
-                    let currentUrl = extractHostnameAndDomain(tab.url!);
                     if (currentUrl) {
                         dailyStatistics['restrictedTimePerDay'][currentUrl] = dailyStatistics['restrictedTimePerDay'][currentUrl] || 0;
                         dailyStatistics['restrictedTimePerDay'][currentUrl] += 1;
@@ -349,7 +349,7 @@ export default defineBackground(() => {
             storeData(blockedWebsite.website, blockedWebsite.totalTime);
             if (blockedWebsite.totalTime >= blockedWebsite.timeAllowed[dayOfTheWeek]) {
                 clearInterval(activeBlockTimer!);
-                redirectToUrl(blockedWebsite.redirectUrl, tab.id!, blockedWebsite.website);
+                redirectToUrl(blockedWebsite.redirectUrl, tab.id!, blockedWebsite.website, "Time limit reached on " + currentUrl);
             }
 
             if (globalTimeBudget) {
@@ -358,7 +358,7 @@ export default defineBackground(() => {
 
                 if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
                     clearInterval(activeBlockTimer!);
-                    redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget");
+                    redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget", "Time limit reached on your Global Budget (" + currentUrl + ")");
                 }
             }
         } else if (globalTimeBudget) {
@@ -368,12 +368,12 @@ export default defineBackground(() => {
 
             if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
                 clearInterval(activeBlockTimer!);
-                redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget");
+                redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget", "Time limit reached on your Global Budget (" + currentUrl + ")");
             }
         }
     }
 
-    const checkScheduledBlock = (scheduledBlockRanges: Array<{ start: number; end: number, days: boolean[] }>, redirectUrl: string, tab: chrome.tabs.Tab) => {
+    const checkScheduledBlock = (scheduledBlockRanges: Array<{ start: number; end: number, days: boolean[] }>, redirectUrl: string, tab: chrome.tabs.Tab, globalBudget: boolean) => {
         const currentTime = new Date();
         const dayOfTheWeek = (currentTime.getDay() + 6) % 7;
         const currentTimestamp = currentTime.getHours() * 60 + currentTime.getMinutes();
@@ -381,14 +381,20 @@ export default defineBackground(() => {
         // exclude the current day if it is not in the scheduled block range
         const filteredScheduledBlockRanges = scheduledBlockRanges.filter((range) => range.days[dayOfTheWeek] == true);
 
-        if (
-            filteredScheduledBlockRanges.some(
-                (range) => isWithinScheduledBlock(range, currentTimestamp)
-            )
-        ) {
-            redirectToUrl(redirectUrl, tab.id!, extractHostnameAndDomain(tab.url!)!);
-            return;
-        }
+        filteredScheduledBlockRanges.some((range) => {
+            if (isWithinScheduledBlock(range, currentTimestamp)) {
+                const currentUrl = extractHostnameAndDomain(tab.url!)!;
+
+                if (globalBudget) {
+                    redirectToUrl(redirectUrl, tab.id!, currentUrl, "Scheduled block between " + scheduledBlockDisplay(range) + " on Global Budget (" + currentUrl + ")");
+                } else {
+                    redirectToUrl(redirectUrl, tab.id!, currentUrl, "Scheduled block between " + scheduledBlockDisplay(range) + " on " + currentUrl);
+                }
+
+                return true;
+            }
+            return false;
+        });
     }
 
     function isWithinScheduledBlock(range: { start: number; end: number }, currentTimestamp: number) {
@@ -399,7 +405,7 @@ export default defineBackground(() => {
         return currentTimestamp >= range.start && currentTimestamp < range.end;
     }
 
-    const redirectToUrl = (url: string, tabId: number, website: string = "Others") => {
+    const redirectToUrl = (url: string, tabId: number, website: string = "Others", redirectReason: string | null = null) => {
         browser.storage.local.get(['dailyStatistics'], (data) => {
             if (data.dailyStatistics) {
                 const dailyStatistics = data.dailyStatistics;
@@ -411,7 +417,11 @@ export default defineBackground(() => {
         });
 
         if (url == "") {
-            browser.tabs.update(tabId, { "url": browser.runtime.getURL('/inspiration.html') });
+            if (redirectReason) {
+                browser.tabs.update(tabId, { "url": browser.runtime.getURL(`/inspiration.html?reason=${redirectReason}`) });
+            } else {
+                browser.tabs.update(tabId, { "url": browser.runtime.getURL('/inspiration.html') });
+            }
         } else {
             if (url.includes("https://") || url.includes("http://")) {
                 browser.tabs.update(tabId, { "url": url });
