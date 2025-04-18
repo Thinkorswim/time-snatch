@@ -1,6 +1,7 @@
 import { BlockedWebsite } from "@/models/BlockedWebsite";
 import { GlobalTimeBudget } from "@/models/GlobalTimeBudget";
 import { timeDisplayFormatBadge, extractHostnameAndDomain, validateURL, scheduledBlockDisplay } from "@/lib/utils";
+import { defaultQuotes } from "@/entrypoints/inspiration/quotes";
 
 export default defineBackground(() => {
     browser.runtime.onInstalled.addListener((object) => {
@@ -8,7 +9,7 @@ export default defineBackground(() => {
             browser.runtime.openOptionsPage();
         }
 
-        browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget', 'dailyStatistics', 'historicalRestrictedTimePerDay', 'historicalBlockedPerDay'], (data) => {
+        browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget', 'dailyStatistics', 'historicalRestrictedTimePerDay', 'historicalBlockedPerDay', "quotes"], (data) => {
             if (!data.blockedWebsitesList) {
                 browser.storage.local.set({ blockedWebsitesList: {} });
             }
@@ -48,6 +49,11 @@ export default defineBackground(() => {
 
                 browser.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() });
             }
+
+            if (!data.quotes) {
+                browser.storage.local.set({ quotes: defaultQuotes });
+            }
+
 
             if (object.reason === 'update') {
                 // Handle legacy data

@@ -33,6 +33,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { RestrictedPerDayChart } from './RestrictedPerDayChart';
 import { BlockedPerDayChart } from './BlockedPerDayChart';
+import { QuotesTable } from '@/components/custom/QuotesTable';
+import { QuotesForm } from '@/components/custom/QuotesForm';
 
 function Options() {
   const [isAddWebsiteDialogOpen, setIsWebsiteDialogOpen] = useState(false);
@@ -59,6 +61,10 @@ function Options() {
   const [historicalRestrictedTimePerDay, setHistoricalRestrictedTimePerDay] = useState<Record<string, Record<string, number>>>({});
   const [historicalBlockedPerDay, setHistoricalBlockedPerDay] = useState<Record<string, Record<string, number>>>({});
 
+  const [quotes, setQuotes] = useState<Array<{ author: string; quote: string }> | null>(null);
+  const [deleteQuoteDialogOpen, setDeleteQuoteDialogOpen] = useState(false);
+  const [addQuoteDialogOpen, setAddQuoteDialogOpen] = useState(false);
+  const [quoteToDelete, setQuoteToDelete] = useState<{ author: string; quote: string } | null>(null);
 
   // on load set the active tab to the one that was last open
   useEffect(() => {
@@ -88,6 +94,18 @@ function Options() {
     const randomIndex = Math.floor(Math.random() * ctaDiscordTexts.length);
     setCtaDiscordTexts(ctaDiscordTexts[randomIndex]);
   };
+
+  const refreshQuotes = () => {
+    setAddQuoteDialogOpen(false);
+    setQuoteToDelete(null);
+
+    browser.storage.local.get(['quotes'], (data) => {
+      if (data.quotes) {
+        setQuotes(data.quotes);
+        browser.storage.sync.set({ quotes: data.quotes });
+      }
+    });
+  }
 
   const refreshBlockedWebsitesList = () => {
     setIsWebsiteDialogOpen(false);
@@ -228,7 +246,7 @@ function Options() {
     selectRandomText();
 
     // Retrieve related data from storage
-    browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget', 'password'], (data) => {
+    browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget', 'password', 'quotes'], (data) => {
       if (data.blockedWebsitesList) {
         setBlockedWebsitesList(data.blockedWebsitesList);
       }
@@ -240,6 +258,10 @@ function Options() {
 
       if (data.password) {
         setRequirePassword(true);
+      }
+
+      if (data.quotes) {
+        setQuotes(data.quotes);
       }
     });
   }, []);
@@ -272,6 +294,18 @@ function Options() {
       setHistoricalRestrictedTimePerDay(data.historicalRestrictedTimePerDay);
       setHistoricalBlockedPerDay(data.historicalBlockedPerDay);
     });
+  }
+
+  const handleAddQuote = () => {
+
+  }
+
+  const deleteQuote = () => {
+    if (!quoteToDelete || !quotes) return;
+
+    const newQuotes = quotes?.filter(quote => !(quote.author === quoteToDelete.author && quote.quote === quoteToDelete.quote));
+    setQuotes(newQuotes);
+    browser.storage.local.set({ quotes: newQuotes });
   }
 
 
@@ -553,14 +587,53 @@ function Options() {
                   Settings
                 </div>
                 <div className='mt-8 bg-muted/50 p-5 rounded-xl'>
+
                   <PasswordProtection
                     requirePassword={requirePassword}
                     setRequirePassword={setRequirePassword}
                   />
+
+                  <QuotesTable quotes={quotes} addQuote={() => { setAddQuoteDialogOpen(true) }} deleteQuote={({ author, quote }) => { setQuoteToDelete({ author, quote }); setDeleteQuoteDialogOpen(true) }} />
+
+
                 </div>
               </div>
 
             </TabsContent>
+
+            <Dialog open={addQuoteDialogOpen} onOpenChange={() => { setAddQuoteDialogOpen(false) }}>
+              <DialogContent className="bg-card" >
+                <ScrollArea className="max-h-[800px] ">
+                  <div className='bg-card m-2 p-4 rounded-md'>
+                    <DialogTitle>Add New Quote</DialogTitle>
+                    <DialogDescription>
+                      <QuotesForm callback={refreshQuotes} />
+                    </DialogDescription>
+                  </div>
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={deleteQuoteDialogOpen} onOpenChange={setDeleteQuoteDialogOpen}>
+              <DialogContent className="sm:max-w-[425px] p-6">
+                <DialogHeader>
+                  <DialogTitle>
+                    Delete Quote
+                  </DialogTitle>
+                  <DialogDescription className='pt-2'>
+                    Are you sure you want to delete this quote <span className='font-bold'>{quoteToDelete?.quote}  - {quoteToDelete?.author}</span>?
+                  </DialogDescription>
+                </DialogHeader>
+
+                <DialogFooter className='pt-2'>
+                  <Button type="submit" variant={"destructive"} onClick={() => {
+                    deleteQuote();
+                    setDeleteQuoteDialogOpen(false);
+                  }}>Delete</Button>
+                  <Button type="submit" onClick={() => setDeleteQuoteDialogOpen(false)}>Close</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </Tabs>
         </div>
 

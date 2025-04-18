@@ -2,21 +2,28 @@ import { useState, useEffect } from 'react'
 import './style.css';
 import '~/assets/global.css';
 import { useTypewriter } from 'react-simple-typewriter'
-import { quotes } from './quotes'
-
 
 function Inspiration() {
 
-  // Select a random quote on component mount
-  const [selectedQuote, setSelectedQuote] = useState(quotes[0]);
+  const [selectedQuote, setSelectedQuote] = useState({
+    quote: 'You cannot escape the responsibility of tomorrow by evading it today.',
+    author: "Abraham Lincoln"
+  });
+  const [showAuthor, setShowAuthor] = useState(false);
+  const [reason, setReason] = useState('');
 
   useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * quotes.length);
-    setSelectedQuote(quotes[randomIndex]);
+    const params = new URLSearchParams(window.location.search);
+    setReason(params.get('reason') || '');
+
+    browser.storage.local.get(['quotes'], (data) => {
+      if (data.quotes && data.quotes.length > 0) {
+        const randomIndex = Math.floor(Math.random() * data.quotes.length);
+        setSelectedQuote(data.quotes[randomIndex]);
+      }
+    });
   }, []);
 
-  // State for author visibility
-  const [showAuthor, setShowAuthor] = useState(false);
 
   // Typewriter effects
   const [quote] = useTypewriter({
@@ -32,13 +39,6 @@ function Inspiration() {
     loop: 1
   });
 
-  // State for reason
-  const [reason, setReason] = useState('');
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setReason(params.get('reason') || '');
-  }, []);
 
   return (
     <>
@@ -47,7 +47,7 @@ function Inspiration() {
           {quote}
           {showAuthor && (
             <div className="flex items-center justify-end mt-5 w-full text-3xl font-extralight">
-              {author}
+              - {author}
             </div>
           )}
         </div>
