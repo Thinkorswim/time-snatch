@@ -2,7 +2,7 @@
   "name": "Time Snatch - Block Websites with Timers",
   "description": "Time restrict websites, block websites, control your browsing patterns and beat procrastination.",
   "private": true,
-  "version": "3.0.5.0",
+  "version": "3.0.6.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
