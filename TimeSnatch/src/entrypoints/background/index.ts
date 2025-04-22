@@ -1,6 +1,6 @@
 import { BlockedWebsite } from "@/models/BlockedWebsite";
 import { GlobalTimeBudget } from "@/models/GlobalTimeBudget";
-import { timeDisplayFormatBadge, extractHostnameAndDomain, validateURL, scheduledBlockDisplay } from "@/lib/utils";
+import { timeDisplayFormatBadge, extractHostnameAndDomain, extractPathnameAndParams, validateURL, scheduledBlockDisplay } from "@/lib/utils";
 import { defaultQuotes } from "@/entrypoints/inspiration/quotes";
 
 export default defineBackground(() => {
@@ -84,7 +84,8 @@ export default defineBackground(() => {
                                         variableSchedule: false,
                                         redirectUrl: "",
                                         lastAccessedDate: new Date().toLocaleDateString('en-CA').slice(0, 10),
-                                        scheduledBlockRanges: []
+                                        scheduledBlockRanges: [],
+                                        allowedPaths: [],
                                     })
 
                                     if (item.redirectUrl != "default" && validateURL(item.redirectUrl)) {
@@ -266,6 +267,9 @@ export default defineBackground(() => {
             const currentTabUrl = extractHostnameAndDomain(tab.url!);
             if (!currentTabUrl) return;
 
+            const currentTabPath = extractPathnameAndParams(tab.url!);
+            if (!currentTabPath) return;
+
             const isUrlInGlobalList = globalTimeBudget.websites.has(currentTabUrl);
             const isUrlInBlockedList = Object.hasOwn(blockedWebsites, currentTabUrl);
 
@@ -276,6 +280,9 @@ export default defineBackground(() => {
             if (isUrlInBlockedList) {
                 let currentBlockedWebsite = blockedWebsites[currentTabUrl];
                 if (!currentBlockedWebsite) return;
+
+                let allowedPaths:string[] = currentBlockedWebsite.allowedPaths;
+                if (allowedPaths.includes(currentTabPath)) return;
 
                 if (currentBlockedWebsite.timeAllowed[dayOfTheWeek] == -1) return;
 

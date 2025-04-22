@@ -59,6 +59,21 @@ export const extractHostnameAndDomain = (url: string): string | null => {
   }
 };
 
+export const extractPathnameAndParams = (url: string): string | null => {
+  try {
+    const normalizedUrl = url.startsWith('http://') || url.startsWith('https://')
+      ? url
+      : `https://${url}`;
+
+    const { pathname, searchParams } = new URL(normalizedUrl); // Extract the hostname
+    searchParams.sort();
+    
+    return pathname + (searchParams.size?"?"+searchParams.toString():"");
+  } catch (error) {
+    return null;
+  }
+};
+
 export const hasSubdomain = (url: string | null): boolean => {
   if (!url) return false; // Return false if the URL is null
 
