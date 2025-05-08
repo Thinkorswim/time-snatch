@@ -68,7 +68,7 @@ export const extractPathnameAndParams = (url: string): string | null => {
     const { pathname, searchParams } = new URL(normalizedUrl); // Extract the hostname
     searchParams.sort();
     
-    return pathname + (searchParams.size?"?"+searchParams.toString():"");
+    return pathname.slice(1) + (searchParams.size?"?"+searchParams.toString():"");
   } catch (error) {
     return null;
   }

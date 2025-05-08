@@ -2,6 +2,7 @@ import { BlockedWebsite } from "@/models/BlockedWebsite";
 import { GlobalTimeBudget } from "@/models/GlobalTimeBudget";
 import { timeDisplayFormatBadge, extractHostnameAndDomain, extractPathnameAndParams, validateURL, scheduledBlockDisplay } from "@/lib/utils";
 import { defaultQuotes } from "@/entrypoints/inspiration/quotes";
+import { Settings } from "@/models/Settings";
 
 export default defineBackground(() => {
     browser.runtime.onInstalled.addListener((object) => {
@@ -9,7 +10,7 @@ export default defineBackground(() => {
             browser.runtime.openOptionsPage();
         }
 
-        browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget', 'dailyStatistics', 'historicalRestrictedTimePerDay', 'historicalBlockedPerDay', "quotes"], (data) => {
+        browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget', 'dailyStatistics', 'historicalRestrictedTimePerDay', 'historicalBlockedPerDay', "quotes", "settings", "password"], (data) => {
             if (!data.blockedWebsitesList) {
                 browser.storage.local.set({ blockedWebsitesList: {} });
             }
@@ -54,6 +55,16 @@ export default defineBackground(() => {
                 browser.storage.local.set({ quotes: defaultQuotes });
             }
 
+            if (!data.settings) {
+                let password = data.password ? data.password : "";
+                
+                const settings = Settings.fromJSON({
+                    password: password,
+                    whiteListPathsEnabled: false,
+                });
+
+                browser.storage.local.set({ settings });
+            }
 
             if (object.reason === 'update') {
                 // Handle legacy data
@@ -133,6 +144,11 @@ export default defineBackground(() => {
                                     range.days = [true, true, true, true, true, true, true];
                                 }
                             });
+                        }
+
+                        // add empty allowedPaths array
+                        if (!blockedWebsitesList[website].allowedPaths) {
+                            blockedWebsitesList[website].allowedPaths = [];
                         }
                     }
 
@@ -268,7 +284,6 @@ export default defineBackground(() => {
             if (!currentTabUrl) return;
 
             const currentTabPath = extractPathnameAndParams(tab.url!);
-            if (!currentTabPath) return;
 
             const isUrlInGlobalList = globalTimeBudget.websites.has(currentTabUrl);
             const isUrlInBlockedList = Object.hasOwn(blockedWebsites, currentTabUrl);
@@ -281,8 +296,10 @@ export default defineBackground(() => {
                 let currentBlockedWebsite = blockedWebsites[currentTabUrl];
                 if (!currentBlockedWebsite) return;
 
-                let allowedPaths:string[] = currentBlockedWebsite.allowedPaths;
-                if (allowedPaths.includes(currentTabPath)) return;
+                if (currentTabPath) {
+                    let allowedPaths: string[] = currentBlockedWebsite.allowedPaths;
+                    if (allowedPaths.includes(currentTabPath)) return;
+                }
 
                 if (currentBlockedWebsite.timeAllowed[dayOfTheWeek] == -1) return;
 
