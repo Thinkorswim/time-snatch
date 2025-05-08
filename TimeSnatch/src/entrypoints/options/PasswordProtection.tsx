@@ -3,6 +3,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
+import { Settings } from '@/models/Settings';
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -50,7 +51,9 @@ export function PasswordProtection({
   const handlePasswordSubmit = async () => {
     if (password === passwordConfirm) {
       const hashedPassword = await encryptPassword(password);
-      browser.storage.local.set({ password: hashedPassword });
+      browser.storage.local.get(['settings'], (data) => {
+        browser.storage.local.set({ settings: { ...data.settings, password: hashedPassword } });
+      });
       setPasswordSaved(true);
       setIsPasswordSetDialogOpen(false);
       setErrorMsg("");
@@ -94,16 +97,16 @@ export function PasswordProtection({
   }
 
   const handlePasswordCheck = async () => {
-    browser.storage.local.get(['password'], async (data) => {
-      if (data.password) {
-        const isCorrect = await compareEncrypted(passwordCheck, data.password);
+    browser.storage.local.get(['settings'], async (data) => {
+      if (data.settings.password) {
+        const isCorrect = await compareEncrypted(passwordCheck, data.settings.password);
         if (isCorrect) {
           setRequirePassword(false);
           setIsPasswordEntryDialogOpen(false);
           setErrorMsg("");
 
           // Remove password from storage
-          browser.storage.local.remove('password');
+          browser.storage.local.set({ settings: { ...data.settings, password: "" } });
         } else {
           setErrorMsg("Incorrect password");
         }
@@ -114,7 +117,7 @@ export function PasswordProtection({
 
   return (
     <>
-      <div className="flex items-center justify-between max-w-[250px]">
+      <div className="flex items-center justify-between max-w-[300px]">
         <div className="flex items-center">
           <Label className='text-base' htmlFor="requirePassword">Password Protection</Label>
           <TooltipProvider>

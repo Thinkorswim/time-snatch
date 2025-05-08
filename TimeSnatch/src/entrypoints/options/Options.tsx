@@ -35,6 +35,8 @@ import { RestrictedPerDayChart } from './RestrictedPerDayChart';
 import { BlockedPerDayChart } from './BlockedPerDayChart';
 import { QuotesTable } from '@/components/custom/QuotesTable';
 import { QuotesForm } from '@/components/custom/QuotesForm';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Switch } from '@/components/ui/switch';
 
 function Options() {
   const [isAddWebsiteDialogOpen, setIsWebsiteDialogOpen] = useState(false);
@@ -65,6 +67,9 @@ function Options() {
   const [deleteQuoteDialogOpen, setDeleteQuoteDialogOpen] = useState(false);
   const [addQuoteDialogOpen, setAddQuoteDialogOpen] = useState(false);
   const [quoteToDelete, setQuoteToDelete] = useState<{ author: string; quote: string } | null>(null);
+
+  const [whiteListPathsEnabled, setWhiteListPathsEnabled] = useState(false);
+
 
   // on load set the active tab to the one that was last open
   useEffect(() => {
@@ -224,9 +229,9 @@ function Options() {
   }
 
   const handlePasswordCheck = async () => {
-    browser.storage.local.get(['password'], async (data) => {
-      if (data.password) {
-        const isCorrect = await compareEncrypted(passwordCheck, data.password);
+    browser.storage.local.get(['settings'], async (data) => {
+      if (data.settings) {
+        const isCorrect = await compareEncrypted(passwordCheck, data.settings.password);
         if (isCorrect) {
           setIsPasswordEntryDialogOpen(false);
           setPasswordCheck("");
@@ -239,6 +244,24 @@ function Options() {
     });
   }
 
+  const handleWhiteListPathsEnabled = (checked: boolean) => {
+    setWhiteListPathsEnabled(checked);
+    browser.storage.local.get(['settings'], (data) => {
+      const settings = { ...data.settings, whiteListPathsEnabled: checked };
+      browser.storage.local.set({ settings: settings });
+    });
+
+    if (!checked) {
+      browser.storage.local.get(['blockedWebsitesList'], (data) => {
+        const newBlockedWebsitesList = { ...data.blockedWebsitesList };
+        for (const website in newBlockedWebsitesList) {
+          newBlockedWebsitesList[website].allowedPaths = [];
+        }
+        browser.storage.local.set({ blockedWebsitesList: newBlockedWebsitesList });
+      });
+    }
+  }
+
   const dayOfTheWeek = (new Date().getDay() + 6) % 7;
 
   useEffect(() => {
@@ -246,7 +269,7 @@ function Options() {
     selectRandomText();
 
     // Retrieve related data from storage
-    browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget', 'password', 'quotes'], (data) => {
+    browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget', 'settings', 'quotes'], (data) => {
       if (data.blockedWebsitesList) {
         setBlockedWebsitesList(data.blockedWebsitesList);
       }
@@ -256,7 +279,11 @@ function Options() {
         setGlobalTimeBudget(globalTimeBudget);
       }
 
-      if (data.password) {
+      if (data.settings.whiteListPathsEnabled !== undefined) {
+        setWhiteListPathsEnabled(data.settings.whiteListPathsEnabled);
+      }
+
+      if (data.settings.password !== undefined && data.settings.password !== "") {
         setRequirePassword(true);
       }
 
@@ -294,10 +321,6 @@ function Options() {
       setHistoricalRestrictedTimePerDay(data.historicalRestrictedTimePerDay);
       setHistoricalBlockedPerDay(data.historicalBlockedPerDay);
     });
-  }
-
-  const handleAddQuote = () => {
-
   }
 
   const deleteQuote = () => {
@@ -344,7 +367,7 @@ function Options() {
                         <div className='bg-card m-2 p-4 rounded-md'>
                           <DialogTitle>Block a Distracting Website</DialogTitle>
                           <DialogDescription>
-                            <BlockedWebsiteForm blockedWebsiteProp={blockedWebsite} callback={refreshBlockedWebsitesList} />
+                            <BlockedWebsiteForm blockedWebsiteProp={blockedWebsite} whiteListPathsEnabled={whiteListPathsEnabled} callback={refreshBlockedWebsitesList} />
                           </DialogDescription>
                         </div>
                       </ScrollArea>
@@ -586,19 +609,51 @@ function Options() {
                 <div className='text-3xl font-bold w-full text-muted-foreground'>
                   Settings
                 </div>
-                <div className='mt-8 bg-muted/50 p-5 rounded-xl'>
 
+                <div className='mt-8 bg-muted/50 p-5 rounded-xl'>
                   <PasswordProtection
                     requirePassword={requirePassword}
                     setRequirePassword={setRequirePassword}
                   />
-
-                  <QuotesTable quotes={quotes} addQuote={() => { setAddQuoteDialogOpen(true) }} deleteQuote={({ author, quote }) => { setQuoteToDelete({ author, quote }); setDeleteQuoteDialogOpen(true) }} />
-
-
                 </div>
-              </div>
 
+                <div className='mt-4 bg-muted/50 p-5 rounded-xl'>
+                  <QuotesTable quotes={quotes} addQuote={() => { setAddQuoteDialogOpen(true) }} deleteQuote={({ author, quote }) => { setQuoteToDelete({ author, quote }); setDeleteQuoteDialogOpen(true) }} />
+                </div>
+
+                <Accordion type="single" collapsible className="w-full bg-muted/50 p-4 mt-4 rounded-2xl">
+                  <AccordionItem value="item-1">
+                    <AccordionTrigger className='text-base'>Advanced Settings</AccordionTrigger>
+                    <AccordionContent>
+
+                      <div className="flex items-center justify-between max-w-[350px] mt-4">
+                        <div className="flex items-center">
+                          <Label className='text-base' htmlFor="whiteListPathsEnabled">Enable Whitelisting of URL Paths</Label>
+                          <TooltipProvider>
+                            <Tooltip delayDuration={0}>
+                              <TooltipTrigger asChild>
+                                <button className="flex items-center justify-center ml-2 rounded-full">
+                                  <Info className="w-4 h-4 text-chart-5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-primary text-foreground p-2 rounded">
+                                When blocking a website (e.g. youtube.com) enable the option to allow access to specific URL paths(e.g. youtube.com/watch?v=12345678).
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <Switch
+                          id="whiteListPathsEnabled"
+                          className='data-[state=unchecked]:bg-background'
+                          checked={whiteListPathsEnabled}
+                          onCheckedChange={handleWhiteListPathsEnabled}
+                        />
+                      </div>
+
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </div>
             </TabsContent>
 
             <Dialog open={addQuoteDialogOpen} onOpenChange={() => { setAddQuoteDialogOpen(false) }}>

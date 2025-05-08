@@ -8,7 +8,8 @@ export class BlockedWebsite {
     public variableSchedule: boolean = false,
     public redirectUrl: string,
     public lastAccessedDate: string = new Date().toLocaleDateString('en-CA').slice(0, 10),
-    public scheduledBlockRanges: Array<{ start: number; end: number, days: boolean[] }> = []
+    public scheduledBlockRanges: Array<{ start: number; end: number, days: boolean[] }> = [],
+    public allowedPaths: string[] = []
   ) {
     this.totalTime = 0; // Initialize default value
   }
@@ -23,6 +24,7 @@ export class BlockedWebsite {
     redirectUrl: string;
     lastAccessedDate: string;
     scheduledBlockRanges: Array<{ start: number; end: number, days: boolean[] }>;
+    allowedPaths: string[];
   } {
     return {
       website: this.website,
@@ -33,6 +35,7 @@ export class BlockedWebsite {
       redirectUrl: this.redirectUrl,
       lastAccessedDate: this.lastAccessedDate,
       scheduledBlockRanges: this.scheduledBlockRanges,
+      allowedPaths: this.allowedPaths,
     };
   }
 
@@ -46,6 +49,7 @@ export class BlockedWebsite {
     redirectUrl: string;
     lastAccessedDate: string;
     scheduledBlockRanges: Array<{ start: number; end: number, days: boolean[] }>;
+    allowedPaths: string[];
   }): BlockedWebsite {
     const instance = new BlockedWebsite(
       json.website,
@@ -54,7 +58,8 @@ export class BlockedWebsite {
       json.variableSchedule,
       json.redirectUrl,
       json.lastAccessedDate,
-      json.scheduledBlockRanges
+      json.scheduledBlockRanges,
+      json.allowedPaths,
     );
     instance.totalTime = json.totalTime; // Manually set totalTime
     return instance;

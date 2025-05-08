@@ -19,16 +19,13 @@ type QuotesTableProps = {
 };
 
 export const QuotesTable: React.FC<QuotesTableProps> = ({ quotes, addQuote, deleteQuote }) => {
-
-    console.log("QuotesTable", quotes);
-
     return (
         <>
-            <div className="flex items-center justify-between w-full mt-4 mb-2">
-                <Label className='text-base '>Quotes Management</Label>
+            <div className="flex items-center justify-between w-full mb-2">
+                <Label className='text-base'>Quotes Management</Label>
                 <Button className="h-7 px-3" onClick={addQuote}> <Plus className='h-4 w-4 mr-1' /> Add Quote </Button>
             </div>
-            <ScrollArea className="h-[400px] w-full rounded-md border">
+            <ScrollArea className="h-[220px] w-full rounded-md border">
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-muted">
@@ -37,7 +34,7 @@ export const QuotesTable: React.FC<QuotesTableProps> = ({ quotes, addQuote, dele
                             <TableHead className="text-center pr-4">Options</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody> 
                         {(quotes === null || quotes.length === 0) && (
                             <TableRow className="h-52">
                                 <TableCell colSpan={7} className="text-center">No quotes to show.</TableCell>

@@ -2,11 +2,7 @@ import { useState, useRef, } from 'react';
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Info } from "lucide-react";
 import { Button } from '@/components/ui/button';
-import { validateURL, extractHostnameAndDomain, hasSubdomain, extractHighLevelDomain } from '@/lib/utils';
-import { GlobalTimeBudget } from '@/models/GlobalTimeBudget';
 
 interface QuotesFormProps {
     callback?: () => void; // Generic optional callback
@@ -112,9 +108,7 @@ export const QuotesForm: React.FC<QuotesFormProps> = ({ callback }) => {
             <div className='w-full text-right mb-2'>
                 <Button className="mt-8" onClick={addQuote}> Add Quote </Button>
             </div>
-
-        </div >
-
+        </div>
     );
 };
 
