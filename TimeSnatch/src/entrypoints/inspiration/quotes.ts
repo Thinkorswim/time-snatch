@@ -151,4 +151,8 @@ export const defaultQuotes = [
         quote: 'You do not rise to the level of your goals. You fall to the level of your systems.',
         author: 'James Clear'
     },
+    {
+        quote: 'Concentration is the key to economic results. No other principle of effectiveness is violated as constantly today as the basic principle of concentration',
+        author: 'Peter Drucker'
+    }
 ];

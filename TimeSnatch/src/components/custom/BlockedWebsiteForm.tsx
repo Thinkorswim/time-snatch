@@ -3,18 +3,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Check, Info, Plus, X } from "lucide-react";
+import { Check, Info, Plus, Trash, Trash2, X } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { BlockedWebsite } from '@/models/BlockedWebsite';
-import { validateURL, extractHostnameAndDomain, updateObjectKeyAndData, hasSubdomain, extractHighLevelDomain, timeDisplayFormat, numberToDay } from '@/lib/utils';
+import { validateURL, extractHostnameAndDomain, extractPathnameAndParams, updateObjectKeyAndData, hasSubdomain, extractHighLevelDomain, timeDisplayFormat, numberToDay } from '@/lib/utils';
 import { RoundSlider, ISettingsPointer } from 'mz-react-round-slider';
 
 interface BlockedWebsiteFormProps {
     callback?: () => void; // Generic optional callback
     blockedWebsiteProp?: BlockedWebsite | null; // Optional blocked website to edit
+    whiteListPathsEnabled?: boolean; // Optional prop to enable/disable allowed paths
 }
 
-export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback, blockedWebsiteProp }) => {
+export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback, blockedWebsiteProp, whiteListPathsEnabled }) => {
     let initialBlockedWebsiteData: BlockedWebsite;
     let initialScheduleEnabled = false;
 
@@ -31,6 +32,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
             redirectUrl: "",
             lastAccessedDate: new Date().toLocaleDateString('en-CA').slice(0, 10),
             scheduledBlockRanges: [],
+            allowedPaths: [],
         });
     }
 
@@ -54,6 +56,8 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
 
     const websiteInputRef = useRef<HTMLInputElement | null>(null);
     const redirectInputRef = useRef<HTMLInputElement | null>(null);
+    const enableAllowedPathButtonRef = useRef<HTMLInputElement | null>(null);
+    const newAllowedPathInputRef = useRef<HTMLInputElement>(null);
 
     const [isVariableScheduleEnabled, setIsVariableScheduleEnabled] = useState(initialBlockedWebsiteData.variableSchedule);
     const [selectedDay, setSelectedDay] = useState<number>(0);
@@ -94,6 +98,10 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
             ? initialBlockedWebsiteData.scheduledBlockRanges.map(range => range.days)
             : [[true, true, true, true, true, true, true]]
     );
+
+
+    const [isAllowedPathsEnabled, setIsAllowedPathsEnabled] = useState(initialBlockedWebsiteData.allowedPaths.length != 0);
+    const [allowedPathsArray, setAllowedPathsArray] = useState(initialBlockedWebsiteData.allowedPaths);
 
     const handleVariableScheduleEnabledChange = (checked: boolean) => {
         if (!checked) {
@@ -277,6 +285,8 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
         } else {
             blockedWebsite.redirectUrl = "";
         }
+        
+        blockedWebsite.allowedPaths = allowedPathsArray;
 
         if (isScheduleEnabled) {
             blockedWebsite.scheduledBlockRanges = scheduleTimesArray.map((pair, idx) => ({
@@ -324,6 +334,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                 setTimeAllowedHours([{ value: 0 }]);
                 setScheduleTimesArray([[{ value: 180 }, { value: 660 }]]);
                 setWebsiteSubDomainInfo(null);
+                setAllowedPathsArray([]);
             });
         });
     };
@@ -342,6 +353,15 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
             setWebsiteSubDomainInfo(null);
         }
     }
+
+    const addAllowedPath = (path: string) => {
+        setAllowedPathsArray(prev => [...prev, path]);
+    }
+
+    // Method to remove allowed path
+    const removeAllowedPath = (index: number) => {
+        setAllowedPathsArray(prev => prev.filter((_, i) => i !== index));
+    };
 
     return (
         <div className="w-[99%] mx-auto">
@@ -852,6 +872,81 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                         </>
                     )}
             </div>
+
+            {whiteListPathsEnabled && (
+                <div className="mt-5" ref={enableAllowedPathButtonRef}>
+                    <div className="flex items-center justify-between max-w-[250px]" >
+                        <div className="flex items-center" >
+                            <Label htmlFor="CustomPathes-enabled"> URL Paths Whitelist </Label>
+                            <TooltipProvider>
+                                <Tooltip delayDuration={0}>
+                                    <TooltipTrigger asChild >
+                                        <button className="flex items-center justify-center ml-2 rounded-full" >
+                                            <Info className="w-4 h-4 text-chart-5" />
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="bg-primary text-foreground p-2 rounded " >
+                                        Prevent specific URL paths from being blocked. <br /> For example, block youtube.com but allow youtube.com/watch?v=12345678.
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
+                        <Switch
+                            className="ml-2"
+                            id="CustomPathes-enabled"
+                            checked={isAllowedPathsEnabled}
+                            onCheckedChange={(checked) => setIsAllowedPathsEnabled(checked)}
+                        />
+                    </div>
+                    {
+                        isAllowedPathsEnabled && (
+                            <>
+                                <div className="flex items-center mt-3">
+                                    <Label className='mr-1'> {websiteValue}/ </Label>
+                                    <Input
+                                        className="flex-grow"
+                                        ref={newAllowedPathInputRef}
+                                        placeholder="Enter URL path to be ignored"
+                                    />
+                                    <Button
+                                        className="ml-2"
+                                        onClick={() => {
+                                            const newValue = newAllowedPathInputRef.current?.value;
+                                            if (newValue) {
+                                                addAllowedPath(newValue);
+                                                if (newAllowedPathInputRef.current) {
+                                                    newAllowedPathInputRef.current.value = "";
+                                                }
+                                            }
+                                        }}
+                                    > Add </Button>
+                                </div>
+
+                                {allowedPathsArray.map((pathname: string, i: number) => (
+                                    <div key={i}>
+                                        <div className='flex items-center mt-2'>
+                                            <div
+                                                className="mt-2 flex-grow"
+                                            >
+                                                {websiteValue}/{pathname}
+                                            </div>
+
+                                            <div
+                                                className="ml-2 mt-2 cursor-pointer text-chart-5"
+                                                onClick={() => removeAllowedPath(i)}
+                                            >
+                                                <Trash2 className="h-5 w-5" />
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                ))}
+                            </>
+                        )
+                    }
+                </div>
+            )}
+
 
             <div className='w-full text-right mb-2'>
                 <Button className="mt-8" onClick={addBlockedWebsite}>  {blockedWebsiteProp ? "Save Website" : "Block Website"} </Button>
