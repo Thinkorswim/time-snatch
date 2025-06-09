@@ -189,6 +189,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
 
     // Handle resizing of the circular sliders
     useEffect(() => {
+        if (timeAllowed[selectedDay] === -1) return; // Skip if day is "Day Off"
         const updatePathRadius = () => {
             if (parentRef.current) {
                 const parentWidth = parentRef.current.offsetWidth;
@@ -200,7 +201,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
         return () => {
             window.removeEventListener('resize', updatePathRadius);
         };
-    }, []);
+    }, [selectedDay, timeAllowed[selectedDay]]);
 
     // Get the colors from CSS variables
     useEffect(() => {
@@ -297,7 +298,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
             {isVariableScheduleEnabled && (
                 <div className="flex flex-wrap justify-center my-5">
                     {Array.from({ length: 7 }, (_, i) => {
-                        const dayIndex = i; // Adjust the index to start from 1
+                        const dayIndex = i;
                         return (
                             <div key={dayIndex} className="flex flex-col items-center mx-1">
                                 <div
@@ -576,7 +577,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                                 });
                                             }}
                                             hideText={true}
-                                            pathRadius={pathRadius - 20}
+                                            pathRadius={pathRadius ? pathRadius - 20 : 142}
                                             pathThickness={12}
                                             pathBgColor={secondaryColor}
                                             connectionBgColor={primaryColor}
