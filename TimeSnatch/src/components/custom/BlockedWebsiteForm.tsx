@@ -928,18 +928,17 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                     <div key={i}>
                                         <div className='flex items-center mt-2'>
                                             <div
-                                                className="mt-2 flex-grow"
+                                                className="mt-2 flex-grow break-all"
+                                                style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}
                                             >
                                                 {websiteValue}/{pathname}
                                             </div>
-
                                             <div
                                                 className="ml-2 mt-2 cursor-pointer text-chart-5"
                                                 onClick={() => removeAllowedPath(i)}
                                             >
                                                 <Trash2 className="h-5 w-5" />
                                             </div>
-
                                         </div>
                                     </div>
                                 ))}
