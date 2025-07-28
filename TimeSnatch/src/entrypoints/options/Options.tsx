@@ -81,23 +81,26 @@ function Options() {
     }
   }, []);
 
-  // Define the list of texts
-  const ctaDiscordTexts: string[] = [
-    'Have a question? Join the',
-    'Need help? Join the',
-    'Have a suggestion? Join the',
-    'Want to chat? Join the',
-    'Like productivity? Join the',
-    'Have feedback? Join the',
-  ];
+  const [ctaProperty, setCtaProperty] = useState<string>('');
+  const [ctaDiscordText, setCtaDiscordText] = useState<string>('');
 
-  // State to store the selected text
-  const [ctaDiscordText, setCtaDiscordTexts] = useState<string>('');
+  const selectCallToAction = () => {
+    const randomProperty = Math.random() < 0.5 ? 'discord' : 'github';
+    setCtaProperty(randomProperty);
 
-  // Function to select a random text
-  const selectRandomText = () => {
-    const randomIndex = Math.floor(Math.random() * ctaDiscordTexts.length);
-    setCtaDiscordTexts(ctaDiscordTexts[randomIndex]);
+    if (randomProperty === 'discord') {
+      const ctaDiscordTexts: string[] = [
+        'Have a question? Join the',
+        'Need help? Join the',
+        'Have a suggestion? Join the',
+        'Want to chat? Join the',
+        'Like productivity? Join the',
+        'Have feedback? Join the',
+      ];
+
+      const randomIndex = Math.floor(Math.random() * ctaDiscordTexts.length);
+      setCtaDiscordText(ctaDiscordTexts[randomIndex]);
+    }
   };
 
   const refreshQuotes = () => {
@@ -265,8 +268,7 @@ function Options() {
   const dayOfTheWeek = (new Date().getDay() + 6) % 7;
 
   useEffect(() => {
-    // Select a random text for the CTA Discord
-    selectRandomText();
+    selectCallToAction();
 
     // Retrieve related data from storage
     browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget', 'settings', 'quotes'], (data) => {
@@ -692,70 +694,91 @@ function Options() {
           </Tabs>
         </div>
 
+        <Dialog open={isPasswordEntryDialogOpen} onOpenChange={handlePasswordEntryDialogChange} >
+          <DialogContent className="bg-card" >
+            <div className='bg-card m-2 p-4 rounded-md'>
+              <DialogTitle>Password Protection</DialogTitle>
+              <DialogDescription>
+                <div className="w-[99%] mx-auto">
+                  <div className="mt-5">
+                    <div className="mt-5 flex items-center" >
+                      <Label htmlFor="password">
+                        Password
+                      </Label>
+                      <TooltipProvider>
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger asChild >
+                            <button tabIndex={-1} className="flex items-center justify-center ml-2 rounded-full" >
+                              <Info className="w-4 h-4 text-chart-5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-primary text-foreground p-2 rounded " >
+                            Enter the password to edit settings.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <>
+                      <Input
+                        className='mt-2'
+                        type='password'
+                        id="passwordCheck"
+                        value={passwordCheck}
+                        placeholder="Enter password"
+                        onChange={(e) => setPasswordCheck(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handlePasswordCheck();
+                          }
+                        }}
+                      />
+                      <div className='w-full text-right mb-2'>
+                        <Button className="mt-5" onClick={() => handlePasswordCheck()}> Disable </Button>
+                      </div>
+                    </>
+
+                    {errorMsg && <p className="text-red-500 text-sm mt-2"> {errorMsg} </p>}
+                  </div>
+                </div >
+              </DialogDescription>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <footer className="bg-muted rounded-t-lg py-5 px-8 mt-10">
           <div className="container mx-auto flex justify-between items-center text-xs">
             <div className="flex items-center text-muted-foreground font-semibold"> <img src="/images/gm_logo.svg" alt="Grounded Momentum Logo" className="w-6 h-6 mr-2" /> Grounded Momentum <Dot className='w-2 h-2 mx-1' /> 2025 </div>
-            <div className="flex items-center text-muted-foreground font-semibold">
-              {ctaDiscordText}
-              <div className='flex items-center'>
-                <Button className="ml-3 rounded-lg" onClick={() => { window.open("https://discord.gg/SvTsqKwsgN", "_blank") }}>  <img height="20" width="20" className="mx-1 color-white" src="https://cdn.simpleicons.org/discord/5c4523" /> Discord </Button>
+            {ctaProperty === 'discord' ? (
+              <div className="flex items-center text-muted-foreground font-semibold">
+                {ctaDiscordText}
+                <div className='flex items-center'>
+                  <Button className="ml-3 rounded-lg" onClick={() => { window.open("https://discord.gg/SvTsqKwsgN", "_blank") }}>  <img height="20" width="20" className="mr-1 color-white" src="https://cdn.simpleicons.org/discord/5c4523" /> Discord </Button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center text-muted-foreground font-semibold">
+                Want a Pomodoro Focus Timer? Try
+                <div className='flex items-center'>
+                  <Button
+                    className="ml-3 rounded-lg bg-background hover:bg-[#ff1d25]/20 text-[#ff1d25]"
+                    onClick={() => {
+                      let url = "https://chromewebstore.google.com/detail/cadence-pomodoro-focus-ti/mjpanfloecbdhkpilhgkglonabikjadf";
+                      if (import.meta.env.BROWSER === "firefox") {
+                        url = "https://addons.mozilla.org/en-US/firefox/addon/cadence-pomodoro-focus-timers/";
+                      } else if (import.meta.env.BROWSER === "edge") {
+                        url = "https://microsoftedge.microsoft.com/addons/detail/cadence-pomodoro-focus-/lkgpghlmfjbmfjckgebegoclmklkhdml";
+                      }
+                      window.open(url, "_blank");
+                    }}
+                  >
+                    <img src="/images/logo-cadence.svg" alt="Logo" className="w-5 h-5 mr-2" /> Cadence
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </footer>
       </div >
-
-      <Dialog open={isPasswordEntryDialogOpen} onOpenChange={handlePasswordEntryDialogChange} >
-        <DialogContent className="bg-card" >
-          <div className='bg-card m-2 p-4 rounded-md'>
-            <DialogTitle>Password Protection</DialogTitle>
-            <DialogDescription>
-              <div className="w-[99%] mx-auto">
-                <div className="mt-5">
-                  <div className="mt-5 flex items-center" >
-                    <Label htmlFor="password">
-                      Password
-                    </Label>
-                    <TooltipProvider>
-                      <Tooltip delayDuration={0}>
-                        <TooltipTrigger asChild >
-                          <button tabIndex={-1} className="flex items-center justify-center ml-2 rounded-full" >
-                            <Info className="w-4 h-4 text-chart-5" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                          Enter the password to edit settings.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <>
-                    <Input
-                      className='mt-2'
-                      type='password'
-                      id="passwordCheck"
-                      value={passwordCheck}
-                      placeholder="Enter password"
-                      onChange={(e) => setPasswordCheck(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handlePasswordCheck();
-                        }
-                      }}
-                    />
-                    <div className='w-full text-right mb-2'>
-                      <Button className="mt-5" onClick={() => handlePasswordCheck()}> Disable </Button>
-                    </div>
-                  </>
-
-                  {errorMsg && <p className="text-red-500 text-sm mt-2"> {errorMsg} </p>}
-                </div>
-              </div >
-            </DialogDescription>
-          </div>
-        </DialogContent>
-      </Dialog>
-
     </>
   )
 }

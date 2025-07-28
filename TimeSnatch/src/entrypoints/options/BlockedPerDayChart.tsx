@@ -169,11 +169,7 @@ export function BlockedPerDayChart({ historicalBlockedPerDay }: BlockedPerDayCha
                                     stackId="a"
                                     fill={value.color}
                                     radius={
-                                        index === 0
-                                            ? [0, 0, 4, 4]
-                                            : index === Object.keys(chartConfig).length - 1
-                                                ? [4, 4, 0, 0]
-                                                : [0, 0, 0, 0]
+                                        [0, 0, 0, 0]
                                     }
                                 >
                                     {index === Object.keys(chartConfig).length - 1 && <LabelList
