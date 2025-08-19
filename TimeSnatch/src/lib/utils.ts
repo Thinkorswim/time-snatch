@@ -14,7 +14,20 @@ export const validateURL = (url: string) => {
 
     const parsedUrl = new URL(normalizedUrl);
 
-    return /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(parsedUrl.hostname);
+    // Check if it's a valid domain name (with TLD)
+    const isDomain = /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(parsedUrl.hostname);
+    
+    // Check if it's a valid IPv4 address
+    const isIPv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(parsedUrl.hostname) &&
+      parsedUrl.hostname.split('.').every(octet => {
+        const num = parseInt(octet, 10);
+        return num >= 0 && num <= 255;
+      });
+    
+    // Check if it's a valid IPv6 address (simplified check since URL constructor validates it)
+    const isIPv6 = parsedUrl.hostname.startsWith('[') && parsedUrl.hostname.endsWith(']');
+
+    return isDomain || isIPv4 || isIPv6;
   } catch (error) {
     return false;
   }
@@ -30,6 +43,15 @@ export const extractHighLevelDomain = (url: string): string | null => {
 
     // Remove the 'www.' prefix if it exists
     const domain = hostname.startsWith('www.') ? hostname.slice(4) : hostname;
+
+    // Check if it's an IP address (IPv4 or IPv6)
+    const isIPv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(domain);
+    const isIPv6 = domain.startsWith('[') && domain.endsWith(']');
+    
+    // For IP addresses, return the IP itself as the "high level domain"
+    if (isIPv4 || isIPv6) {
+      return domain;
+    }
 
     const parts = domain.split('.');
     if (parts.length > 2) {
@@ -86,6 +108,15 @@ export const hasSubdomain = (url: string | null): boolean => {
 
     // Remove the 'www.' prefix if it exists
     const domain = hostname.startsWith('www.') ? hostname.slice(4) : hostname;
+
+    // Check if it's an IP address (IPv4 or IPv6)
+    const isIPv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(domain);
+    const isIPv6 = domain.startsWith('[') && domain.endsWith(']');
+    
+    // IP addresses don't have subdomains
+    if (isIPv4 || isIPv6) {
+      return false;
+    }
 
     const parts = domain.split('.');
 

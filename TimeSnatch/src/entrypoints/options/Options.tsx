@@ -81,7 +81,7 @@ function Options() {
     }
   }, []);
 
-  const [ctaProperty, setCtaProperty] = useState<string>('');
+  const [ctaProperty, setCtaProperty] = useState<string>('discord');
   const [ctaDiscordText, setCtaDiscordText] = useState<string>('');
 
   const selectCallToAction = () => {
@@ -752,7 +752,7 @@ function Options() {
               <div className="flex items-center text-muted-foreground font-semibold">
                 {ctaDiscordText}
                 <div className='flex items-center'>
-                  <Button className="ml-3 rounded-lg" onClick={() => { window.open("https://discord.gg/SvTsqKwsgN", "_blank") }}>  <img height="20" width="20" className="mr-1 color-white" src="https://cdn.simpleicons.org/discord/5c4523" /> Discord </Button>
+                  <Button className="ml-3 rounded-lg" onClick={() => { window.open("https://discord.gg/SvTsqKwsgN", "_blank") }}>  <img height="20" width="20" className="mr-2 color-white" src="https://cdn.simpleicons.org/discord/5c4523" /> Discord </Button>
                 </div>
               </div>
             ) : (
@@ -760,7 +760,7 @@ function Options() {
                 Want a Pomodoro Focus Timer? Try
                 <div className='flex items-center'>
                   <Button
-                    className="ml-3 rounded-lg bg-background hover:bg-[#ff1d25]/20 text-[#ff1d25]"
+                    className="ml-3 rounded-lg bg-background hover:bg-[#ff1d25]/10 text-[#ff1d25]"
                     onClick={() => {
                       let url = "https://chromewebstore.google.com/detail/cadence-pomodoro-focus-ti/mjpanfloecbdhkpilhgkglonabikjadf";
                       if (import.meta.env.BROWSER === "firefox") {
