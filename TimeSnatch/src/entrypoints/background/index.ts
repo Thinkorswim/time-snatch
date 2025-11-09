@@ -10,7 +10,7 @@ export default defineBackground(() => {
             browser.runtime.openOptionsPage();
         }
 
-        browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget', 'dailyStatistics', 'historicalRestrictedTimePerDay', 'historicalBlockedPerDay', "quotes", "settings", "password"], (data) => {
+        browser.storage.local.get(['blockedWebsitesList', 'groupTimeBudgets', 'globalTimeBudget', 'dailyStatistics', 'historicalRestrictedTimePerDay', 'historicalBlockedPerDay', "quotes", "settings", "password"], (data) => {
             if (!data.blockedWebsitesList) {
                 browser.storage.local.set({ blockedWebsitesList: {} });
             }
@@ -37,8 +37,8 @@ export default defineBackground(() => {
                 browser.storage.local.set({ dailyStatistics });
             }
 
-            if (!data.globalTimeBudget) {
-                const globalTimeBudget = new GlobalTimeBudget(
+            if (!data.groupTimeBudgets && !data.globalTimeBudget) {
+                const defaultBudget = new GlobalTimeBudget(
                     new Set(),
                     { 0: 300, 1: 300, 2: 300, 3: 300, 4: 300, 5: 300, 6: 300 },
                     false,
@@ -48,7 +48,11 @@ export default defineBackground(() => {
                     []
                 );
 
-                browser.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() });
+                const groupTimeBudgets = [defaultBudget];
+
+                browser.storage.local.set({ 
+                    groupTimeBudgets: groupTimeBudgets.map(b => b.toJSON()) 
+                });
             }
 
             if (!data.quotes) {
@@ -156,26 +160,46 @@ export default defineBackground(() => {
                 });
 
                 
-                if (typeof data.globalTimeBudget.timeAllowed !== 'object') {
-                    data.globalTimeBudget.timeAllowed = {
-                        0: data.globalTimeBudget.timeAllowed,
-                        1: data.globalTimeBudget.timeAllowed,
-                        2: data.globalTimeBudget.timeAllowed,
-                        3: data.globalTimeBudget.timeAllowed,
-                        4: data.globalTimeBudget.timeAllowed,
-                        5: data.globalTimeBudget.timeAllowed,
-                        6: data.globalTimeBudget.timeAllowed,
+                // Migrate from single globalTimeBudget to multiple groupTimeBudgets
+                if (data.globalTimeBudget && !data.groupTimeBudgets) {
+                    // Convert old single budget to new multiple budgets format
+                    const oldBudget = data.globalTimeBudget;
+                    
+                    // Ensure timeAllowed is an object
+                    if (typeof oldBudget.timeAllowed !== 'object') {
+                        oldBudget.timeAllowed = {
+                            0: oldBudget.timeAllowed,
+                            1: oldBudget.timeAllowed,
+                            2: oldBudget.timeAllowed,
+                            3: oldBudget.timeAllowed,
+                            4: oldBudget.timeAllowed,
+                            5: oldBudget.timeAllowed,
+                            6: oldBudget.timeAllowed,
+                        }
                     }
 
-                    if (data.globalTimeBudget.scheduledBlockRanges && data.globalTimeBudget.scheduledBlockRanges.length > 0) {
-                        data.globalTimeBudget.scheduledBlockRanges.forEach((range: { start: number; end: number; days?: boolean[] }) => {
+                    // Ensure scheduledBlockRanges have days field
+                    if (oldBudget.scheduledBlockRanges && oldBudget.scheduledBlockRanges.length > 0) {
+                        oldBudget.scheduledBlockRanges.forEach((range: { start: number; end: number; days?: boolean[] }) => {
                             if (!range.days) {
                                 range.days = [true, true, true, true, true, true, true];
                             }
                         });
                     }
 
-                    browser.storage.local.set({ globalTimeBudget: data.globalTimeBudget });
+                    // Create the new GlobalTimeBudget
+                    const migratedBudget = GlobalTimeBudget.fromJSON(oldBudget);
+
+                    // Create array with single budget
+                    const groupTimeBudgets = [migratedBudget];
+
+                    // Save the new format
+                    browser.storage.local.set({ 
+                        groupTimeBudgets: groupTimeBudgets.map(b => b.toJSON()) 
+                    });
+                    
+                    // Remove the old globalTimeBudget field
+                    browser.storage.local.remove(['globalTimeBudget']);
                 }
             }
         });
@@ -256,15 +280,22 @@ export default defineBackground(() => {
     
 
     const checkUrlBlockStatus = (tab: chrome.tabs.Tab) => {
-        browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget'], (data) => {
-            if (!data.blockedWebsitesList || !data.globalTimeBudget) return;
+        browser.storage.local.get(['blockedWebsitesList', 'groupTimeBudgets'], (data) => {
+            if (!data.blockedWebsitesList) return;
 
             const websiteNames = Object.keys(data.blockedWebsitesList);
             const blockedWebsites = data.blockedWebsitesList;
-            const globalTimeBudget = GlobalTimeBudget.fromJSON(data.globalTimeBudget);
+            
+            // Load group time budgets (array of GlobalTimeBudget)
+            let groupTimeBudgets: GlobalTimeBudget[] = [];
+            if (data.groupTimeBudgets && Array.isArray(data.groupTimeBudgets)) {
+                groupTimeBudgets = data.groupTimeBudgets.map((b: any) => GlobalTimeBudget.fromJSON(b));
+            }
 
-            // No blocked websites
-            if (websiteNames.length === 0 && globalTimeBudget.websites.size === 0) return;
+            // No blocked websites and no group budgets
+            const totalGroupWebsites = groupTimeBudgets.reduce((sum, budget) => sum + budget.websites.size, 0);
+            
+            if (websiteNames.length === 0 && totalGroupWebsites === 0) return;
 
             // Reset daily times if it is a new day
             const today = new Date().toLocaleDateString('en-CA').slice(0, 10);
@@ -272,12 +303,23 @@ export default defineBackground(() => {
                 resetDailyTimers(data.blockedWebsitesList);
             }
 
-            if (globalTimeBudget && globalTimeBudget.lastAccessedDate !== today) {
-                globalTimeBudget.lastAccessedDate = today;
-                globalTimeBudget.totalTime = 0;
-                browser.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() })
-
-                updateHistoricalData();
+            // Reset group budgets if it's a new day
+            if (groupTimeBudgets.length > 0) {
+                let needsUpdate = false;
+                for (const budget of groupTimeBudgets) {
+                    if (budget.lastAccessedDate !== today) {
+                        budget.lastAccessedDate = today;
+                        budget.totalTime = 0;
+                        needsUpdate = true;
+                    }
+                }
+                
+                if (needsUpdate) {
+                    browser.storage.local.set({ 
+                        groupTimeBudgets: groupTimeBudgets.map(b => b.toJSON()) 
+                    });
+                    updateHistoricalData();
+                }
             }
 
             const currentTabUrl = extractHostnameAndDomain(tab.url!);
@@ -285,10 +327,21 @@ export default defineBackground(() => {
 
             const currentTabPath = extractPathnameAndParams(tab.url!);
 
-            const isUrlInGlobalList = globalTimeBudget.websites.has(currentTabUrl);
+            // Find all group budgets that contain this URL (with their indices)
+            const relevantGroupBudgetIndices: number[] = [];
+            const relevantGroupBudgets: GlobalTimeBudget[] = [];
+            groupTimeBudgets.forEach((budget, index) => {
+                if (budget.websites.has(currentTabUrl)) {
+                    relevantGroupBudgetIndices.push(index);
+                    relevantGroupBudgets.push(budget);
+                }
+            });
+            
+            const isUrlInGroupBudgets = relevantGroupBudgets.length > 0;
             const isUrlInBlockedList = Object.hasOwn(blockedWebsites, currentTabUrl);
 
-            if (!isUrlInBlockedList && !isUrlInGlobalList) return;
+            if (!isUrlInBlockedList && !isUrlInGroupBudgets) return;
+            
             // Check what day of the week it is 
             const dayOfTheWeek = (new Date().getDay() + 6) % 7;
 
@@ -315,44 +368,87 @@ export default defineBackground(() => {
                     return;
                 }
 
-                if (isUrlInGlobalList && globalTimeBudget.timeAllowed[dayOfTheWeek] != -1) {
-                    // Check if the current time is in a global scheduled block time
-                    if (globalTimeBudget.scheduledBlockRanges.length > 0) checkScheduledBlock(globalTimeBudget.scheduledBlockRanges, globalTimeBudget.redirectUrl, tab, true);
+                // Check all relevant group budgets
+                if (isUrlInGroupBudgets) {
+                    for (const groupBudget of relevantGroupBudgets) {
+                        if (groupBudget.timeAllowed[dayOfTheWeek] == -1) continue;
+                        
+                        // Check if the current time is in a group scheduled block time
+                        if (groupBudget.scheduledBlockRanges.length > 0) {
+                            checkScheduledBlock(groupBudget.scheduledBlockRanges, groupBudget.redirectUrl, tab, true);
+                        }
 
-                    // Check if global time has expired
-                    if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
-                        redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget", "Time limit reached on your Global Budget (" + currentTabUrl + ")");
-                        return;
+                        // Check if group time has expired
+                        if (groupBudget.totalTime >= groupBudget.timeAllowed[dayOfTheWeek]) {
+                            redirectToUrl(groupBudget.redirectUrl, tab.id!, "Group Budget", "Time limit reached on Group Budget (" + currentTabUrl + ")");
+                            return;
+                        }
                     }
 
-                    if (activeBlockTimer == null) activeBlockTimer = setInterval(() => updateTime(currentBlockedWebsite!, globalTimeBudget, tab), 1000);
+                    if (activeBlockTimer == null) activeBlockTimer = setInterval(() => updateTime(currentBlockedWebsite!, relevantGroupBudgets, relevantGroupBudgetIndices, tab), 1000);
                 } else {
-                    if (activeBlockTimer == null) activeBlockTimer = setInterval(() => updateTime(currentBlockedWebsite!, null, tab), 1000);
+                    if (activeBlockTimer == null) activeBlockTimer = setInterval(() => updateTime(currentBlockedWebsite!, null, null, tab), 1000);
+                }
+                
+                // Show badge for the most restrictive time
+                const badgeTime = getMostRestrictiveBadgeTime(currentBlockedWebsite, isUrlInGroupBudgets ? relevantGroupBudgets : null, dayOfTheWeek);
+                setBadge(badgeTime === -1 ? "" : timeDisplayFormatBadge(badgeTime));
+
+            } else if (isUrlInGroupBudgets) {
+                // Only in group budgets, not in blocked list
+                // Check all relevant group budgets and use the most restrictive one
+                for (const groupBudget of relevantGroupBudgets) {
+                    if (groupBudget.timeAllowed[dayOfTheWeek] == -1) continue;
+
+                    // Check if the current time is in a group scheduled block time
+                    if (groupBudget.scheduledBlockRanges.length > 0) {
+                        checkScheduledBlock(groupBudget.scheduledBlockRanges, groupBudget.redirectUrl, tab, true);
+                    }
+
+                    // Check if group time has expired
+                    if (groupBudget.totalTime >= groupBudget.timeAllowed[dayOfTheWeek]) {
+                        redirectToUrl(groupBudget.redirectUrl, tab.id!, "Group Budget", "Time limit reached on Group Budget (" + currentTabUrl + ")");
+                        return;
+                    }
                 }
 
-                setBadge(timeDisplayFormatBadge(currentBlockedWebsite.timeAllowed[dayOfTheWeek] - currentBlockedWebsite.totalTime))
-
-            } else if (isUrlInGlobalList) {
-                if (globalTimeBudget.timeAllowed[dayOfTheWeek] == -1) return;
-
-                // Check if the current time is in a global scheduled block time
-                if (globalTimeBudget.scheduledBlockRanges.length > 0) checkScheduledBlock(globalTimeBudget.scheduledBlockRanges, globalTimeBudget.redirectUrl, tab, true);
-
-                // Check if global time has expired
-                if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
-                    redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget", "Time limit reached on your Global Budget (" + currentTabUrl + ")");
-                    return;
-                }
-
-                if (activeBlockTimer == null) activeBlockTimer = setInterval(() => updateTime(null, globalTimeBudget, tab), 1000);
-                setBadge(timeDisplayFormatBadge(globalTimeBudget.timeAllowed[dayOfTheWeek] - globalTimeBudget.totalTime));
+                if (activeBlockTimer == null) activeBlockTimer = setInterval(() => updateTime(null, relevantGroupBudgets, relevantGroupBudgetIndices, tab), 1000);
+                
+                // Show badge for the most restrictive group (least time remaining)
+                const badgeTime = getMostRestrictiveBadgeTime(null, relevantGroupBudgets, dayOfTheWeek);
+                setBadge(badgeTime === -1 ? "" : timeDisplayFormatBadge(badgeTime));
             }
 
         });
     }
 
+    // Helper function to calculate the most restrictive time remaining for badge display
+    // Returns -1 if all time limits are unlimited (day off), otherwise returns the lowest time remaining
+    const getMostRestrictiveBadgeTime = (blockedWebsite: BlockedWebsite | null, groupBudgets: GlobalTimeBudget[] | null, dayOfTheWeek: number): number => {
+        let lowestTimeRemaining = Infinity;
 
-    const updateTime = (blockedWebsite: BlockedWebsite | null, globalTimeBudget: GlobalTimeBudget | null, tab: chrome.tabs.Tab) => {
+        // Check blocked website time
+        if (blockedWebsite && blockedWebsite.timeAllowed[dayOfTheWeek] !== -1) {
+            lowestTimeRemaining = blockedWebsite.timeAllowed[dayOfTheWeek] - blockedWebsite.totalTime;
+        }
+
+        // Check all group budgets time
+        if (groupBudgets && groupBudgets.length > 0) {
+            for (const groupBudget of groupBudgets) {
+                if (groupBudget.timeAllowed[dayOfTheWeek] === -1) continue;
+                const groupTimeRemaining = groupBudget.timeAllowed[dayOfTheWeek] - groupBudget.totalTime;
+                if (groupTimeRemaining < lowestTimeRemaining) {
+                    lowestTimeRemaining = groupTimeRemaining;
+                }
+            }
+        }
+
+        // If no time limits were found (all are -1), return -1 to indicate no badge should be shown
+        return lowestTimeRemaining === Infinity ? -1 : lowestTimeRemaining;
+    }
+
+
+    const updateTime = (blockedWebsite: BlockedWebsite | null, groupBudgets: GlobalTimeBudget[] | null, groupBudgetIndices: number[] | null, tab: chrome.tabs.Tab) => {
         const dayOfTheWeek = (new Date().getDay() + 6) % 7;
         let currentUrl = extractHostnameAndDomain(tab.url!);
         
@@ -375,31 +471,63 @@ export default defineBackground(() => {
 
         if (blockedWebsite) {
             blockedWebsite.totalTime += 1;
-            setBadge(timeDisplayFormatBadge(blockedWebsite.timeAllowed[dayOfTheWeek] - blockedWebsite.totalTime));
             storeData(blockedWebsite.website, blockedWebsite.totalTime);
             if (blockedWebsite.totalTime >= blockedWebsite.timeAllowed[dayOfTheWeek]) {
                 clearInterval(activeBlockTimer!);
                 redirectToUrl(blockedWebsite.redirectUrl, tab.id!, blockedWebsite.website, "Time limit reached on " + currentUrl);
+                return;
             }
 
-            if (globalTimeBudget) {
-                globalTimeBudget.totalTime += 1;
-                storeGlobalData(globalTimeBudget.totalTime);
-
-                if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
-                    clearInterval(activeBlockTimer!);
-                    redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget", "Time limit reached on your Global Budget (" + currentUrl + ")");
+            // Update all relevant group budgets
+            if (groupBudgets && groupBudgets.length > 0 && groupBudgetIndices && groupBudgetIndices.length > 0) {
+                // Increment all budgets first
+                for (const groupBudget of groupBudgets) {
+                    groupBudget.totalTime += 1;
+                }
+                
+                // Store all updated group budgets with their indices
+                storeGroupData(groupBudgets, groupBudgetIndices);
+                
+                // Then check if any need to redirect
+                for (const groupBudget of groupBudgets) {
+                    if (groupBudget.timeAllowed[dayOfTheWeek] === -1) continue;
+                    
+                    if (groupBudget.totalTime >= groupBudget.timeAllowed[dayOfTheWeek]) {
+                        clearInterval(activeBlockTimer!);
+                        redirectToUrl(groupBudget.redirectUrl, tab.id!, "Group Budget", "Time limit reached on Group Budget (" + currentUrl + ")");
+                        return;
+                    }
                 }
             }
-        } else if (globalTimeBudget) {
-            globalTimeBudget.totalTime += 1;
-            setBadge(timeDisplayFormatBadge(globalTimeBudget.timeAllowed[dayOfTheWeek] - globalTimeBudget.totalTime));
-            storeGlobalData(globalTimeBudget.totalTime);
-
-            if (globalTimeBudget.totalTime >= globalTimeBudget.timeAllowed[dayOfTheWeek]) {
-                clearInterval(activeBlockTimer!);
-                redirectToUrl(globalTimeBudget.redirectUrl, tab.id!, "Global Budget", "Time limit reached on your Global Budget (" + currentUrl + ")");
+            
+            // Show badge for the most restrictive time
+            const badgeTime = getMostRestrictiveBadgeTime(blockedWebsite, groupBudgets, dayOfTheWeek);
+            setBadge(badgeTime === -1 ? "" : timeDisplayFormatBadge(badgeTime));
+            
+        } else if (groupBudgets && groupBudgets.length > 0 && groupBudgetIndices && groupBudgetIndices.length > 0) {
+            // Only group budgets, no blocked website
+            // Increment all budgets first
+            for (const groupBudget of groupBudgets) {
+                groupBudget.totalTime += 1;
             }
+            
+            // Store the updated times before redirecting
+            storeGroupData(groupBudgets, groupBudgetIndices);
+            
+            // Then check if any need to redirect
+            for (const groupBudget of groupBudgets) {
+                if (groupBudget.timeAllowed[dayOfTheWeek] === -1) continue;
+                
+                if (groupBudget.totalTime >= groupBudget.timeAllowed[dayOfTheWeek]) {
+                    clearInterval(activeBlockTimer!);
+                    redirectToUrl(groupBudget.redirectUrl, tab.id!, "Group Budget", "Time limit reached on Group Budget (" + currentUrl + ")");
+                    return;
+                }
+            }
+            
+            // Show badge for the most restrictive time
+            const badgeTime = getMostRestrictiveBadgeTime(null, groupBudgets, dayOfTheWeek);
+            setBadge(badgeTime === -1 ? "" : timeDisplayFormatBadge(badgeTime));
         }
     }
 
@@ -416,7 +544,7 @@ export default defineBackground(() => {
                 const currentUrl = extractHostnameAndDomain(tab.url!)!;
 
                 if (globalBudget) {
-                    redirectToUrl(redirectUrl, tab.id!, currentUrl, "Scheduled block between " + scheduledBlockDisplay(range) + " on Global Budget (" + currentUrl + ")");
+                    redirectToUrl(redirectUrl, tab.id!, currentUrl, "Scheduled block between " + scheduledBlockDisplay(range) + " on Group Budget (" + currentUrl + ")");
                 } else {
                     redirectToUrl(redirectUrl, tab.id!, currentUrl, "Scheduled block between " + scheduledBlockDisplay(range) + " on " + currentUrl);
                 }
@@ -502,15 +630,24 @@ export default defineBackground(() => {
         });
     }
 
-    const storeGlobalData = (totalTime: number) => {
-        browser.storage.local.get(['globalTimeBudget'], (data) => {
-            if (!data.globalTimeBudget || typeof data.globalTimeBudget !== 'object') return;
+    const storeGroupData = (groupBudgets: GlobalTimeBudget[], groupBudgetIndices: number[]) => {
+        browser.storage.local.get(['groupTimeBudgets'], (data) => {
+            if (!data.groupTimeBudgets || !Array.isArray(data.groupTimeBudgets)) return;
 
-            let globalTimeBudget = GlobalTimeBudget.fromJSON(data.globalTimeBudget);
+            // Reconstruct the full array from storage
+            let allGroupBudgets = data.groupTimeBudgets.map((b: any) => GlobalTimeBudget.fromJSON(b));
 
-            globalTimeBudget.totalTime = totalTime;
+            // Update the budgets at the specified indices
+            for (let i = 0; i < groupBudgets.length; i++) {
+                const budgetIndex = groupBudgetIndices[i];
+                if (budgetIndex >= 0 && budgetIndex < allGroupBudgets.length) {
+                    allGroupBudgets[budgetIndex].totalTime = groupBudgets[i].totalTime;
+                }
+            }
 
-            browser.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() });
+            browser.storage.local.set({ 
+                groupTimeBudgets: allGroupBudgets.map(b => b.toJSON()) 
+            });
         });
     }
 

@@ -18,7 +18,7 @@ function Popup() {
   document.body.classList.add('w-[300px]')
 
   const [blockedWebsitesList, setBlockedWebsitesList] = useState<Record<string, BlockedWebsite>>({});
-  const [globalTimeBudget, setGlobalTimeBudget] = useState<GlobalTimeBudget | null>(null);
+  const [groupTimeBudgets, setGroupTimeBudgets] = useState<GlobalTimeBudget[]>([]);
   const [isHighlighted, setIsHighlighted] = useState(false);
   const [activeTab, setActiveTab] = useState('blockedWebsites');
 
@@ -32,7 +32,7 @@ function Popup() {
     browser.runtime.connect();
 
     // Retrieve the list of blocked websites from storage
-    browser.storage.local.get(["blockedWebsitesList", "globalTimeBudget"], (data) => {
+    browser.storage.local.get(["blockedWebsitesList", "groupTimeBudgets"], (data) => {
       if (data.blockedWebsitesList) {
         setBlockedWebsitesList(data.blockedWebsitesList);
 
@@ -48,16 +48,22 @@ function Popup() {
                 };
                 setBlockedWebsitesList(updatedBlockedWebsitesList);
                 setIsHighlighted(true);
-              } else if (data.globalTimeBudget && GlobalTimeBudget.fromJSON(data.globalTimeBudget).websites.has(website)) {
-                setActiveTab('globalTimeBudget');
+              } else if (data.groupTimeBudgets && Array.isArray(data.groupTimeBudgets)) {
+                // Check if current website is in any group budget
+                const budgets = data.groupTimeBudgets.map((b: any) => GlobalTimeBudget.fromJSON(b));
+                const isInGroupBudget = budgets.some(budget => budget.websites.has(website));
+                if (isInGroupBudget) {
+                  setActiveTab('globalTimeBudget');
+                }
               }
             }
           }
         });
       }
 
-      if (data.globalTimeBudget) {
-        setGlobalTimeBudget(GlobalTimeBudget.fromJSON(data.globalTimeBudget));
+      if (data.groupTimeBudgets && Array.isArray(data.groupTimeBudgets)) {
+        const budgets = data.groupTimeBudgets.map((b: any) => GlobalTimeBudget.fromJSON(b));
+        setGroupTimeBudgets(budgets);
       }
     });
   }, []);
@@ -98,15 +104,27 @@ function Popup() {
         <TabsContent value="globalTimeBudget">
           <div className="min-h-64">
             <ScrollArea type="always" className="h-[300px]">
-              {globalTimeBudget && globalTimeBudget.websites.size > 0 ? (
-                Array.from(globalTimeBudget.websites).map((website, index) => (
-                  <ProgressGlobal
-                    key={index}
-                    globalTimeBudget={globalTimeBudget}
-                    website={website}
-                    className={`w-[90%] mx-auto mb-2 font-medium`}
-                  />
-                ))) : (
+              {groupTimeBudgets.length > 0 ? (
+                groupTimeBudgets.map((budget, budgetIndex) => (
+                  <div key={budgetIndex} className="mb-4">
+                    {budget.websites.size > 0 && (
+                      <>
+                        <div className="text-xs font-bold text-muted-foreground px-5 mb-1">
+                          Budget {budgetIndex + 1}
+                        </div>
+                        {Array.from(budget.websites).map((website, index) => (
+                          <ProgressGlobal
+                            key={`${budgetIndex}-${index}`}
+                            globalTimeBudget={budget}
+                            website={website}
+                            className={`w-[90%] mx-auto mb-2 font-medium`}
+                          />
+                        ))}
+                      </>
+                    )}
+                  </div>
+                ))
+              ) : (
                 <p className="text-center text-muted-foreground text-sm">No group budget websites to display.</p>
               )}
 

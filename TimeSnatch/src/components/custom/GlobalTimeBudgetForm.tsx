@@ -12,9 +12,10 @@ import { GlobalTimeBudget } from '@/models/GlobalTimeBudget';
 interface GlobalTimeBudgetFormProps {
     callback?: () => void; // Generic optional callback
     globalTimeBudgetProp: GlobalTimeBudget | null; // Optional blocked website to edit
+    budgetIndex?: number; // Index in the groupTimeBudgets array
 }
 
-export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ callback, globalTimeBudgetProp }) => {
+export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ callback, globalTimeBudgetProp, budgetIndex = 0 }) => {
     if (!globalTimeBudgetProp) {
         globalTimeBudgetProp = GlobalTimeBudget.fromJSON({
             websites: [], // Expect an array of strings
@@ -244,10 +245,22 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
             }));
         }
 
-        browser.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() }, () => {
-            // Close the dialog
-            if (callback) {
-                callback();
+        // Load all budgets, update the one at budgetIndex, and save
+        browser.storage.local.get(['groupTimeBudgets'], (data) => {
+            if (data.groupTimeBudgets && Array.isArray(data.groupTimeBudgets)) {
+                const allBudgets = data.groupTimeBudgets.map((b: any) => GlobalTimeBudget.fromJSON(b));
+                
+                // Update the budget at the specified index
+                if (budgetIndex >= 0 && budgetIndex < allBudgets.length) {
+                    allBudgets[budgetIndex] = globalTimeBudget;
+                }
+                
+                browser.storage.local.set({ groupTimeBudgets: allBudgets.map(b => b.toJSON()) }, () => {
+                    // Close the dialog
+                    if (callback) {
+                        callback();
+                    }
+                });
             }
         });
 

@@ -45,13 +45,16 @@ function Options() {
 
   const [websiteToDelete, setWebsiteToDelete] = useState("")
   const [deleteGlobalDialogOpen, setDeleteGlobalDialogOpen] = useState(false);
+  const [deleteBudgetDialogOpen, setDeleteBudgetDialogOpen] = useState(false);
+  const [budgetToDeleteIndex, setBudgetToDeleteIndex] = useState<number>(-1);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [globalWebsiteToDelete, setGlobalWebsiteToDelete] = useState("")
   const [blockedWebsite, setBlockedWebsite] = useState<null | BlockedWebsite>(null); // State for blockedWebsite
 
   const [blockedWebsitesList, setBlockedWebsitesList] = useState<Record<string, BlockedWebsite>>({});
-  const [globalTimeBudget, setGlobalTimeBudget] = useState<GlobalTimeBudget | null>(null);
+  const [groupTimeBudgets, setGroupTimeBudgets] = useState<GlobalTimeBudget[]>([]);
+  const [selectedBudgetIndex, setSelectedBudgetIndex] = useState<number>(0);
 
   const [requirePassword, setRequirePassword] = useState(false);
   const [isPasswordEntryDialogOpen, setIsPasswordEntryDialogOpen] = useState(false);
@@ -132,11 +135,11 @@ function Options() {
     setIsEditGlobalTimeBudgetDialogOpen(false);
     setIsAddGlobalTimeBudgetWebsiteDialogOpen(false);
 
-    browser.storage.local.get(['globalTimeBudget'], (data) => {
-      if (data.globalTimeBudget) {
-        const globalTimeBudget = GlobalTimeBudget.fromJSON(data.globalTimeBudget);
-        setGlobalTimeBudget(globalTimeBudget);
-        browser.storage.sync.set({ globalTimeBudget: globalTimeBudget.toJSON() });
+    browser.storage.local.get(['groupTimeBudgets'], (data) => {
+      if (data.groupTimeBudgets && Array.isArray(data.groupTimeBudgets)) {
+        const budgets = data.groupTimeBudgets.map((b: any) => GlobalTimeBudget.fromJSON(b));
+        setGroupTimeBudgets(budgets);
+        browser.storage.sync.set({ groupTimeBudgets: data.groupTimeBudgets });
       }
     });
   }
@@ -155,12 +158,13 @@ function Options() {
 
 
   const deleteGlobalTimeBudgetWebsite = () => {
-    if (!globalWebsiteToDelete || !globalTimeBudget) return;
+    if (!globalWebsiteToDelete || selectedBudgetIndex < 0 || selectedBudgetIndex >= groupTimeBudgets.length) return;
 
-    globalTimeBudget.websites.delete(globalWebsiteToDelete)
+    const updatedBudgets = [...groupTimeBudgets];
+    updatedBudgets[selectedBudgetIndex].websites.delete(globalWebsiteToDelete);
 
-    browser.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() }, () => {
-      setGlobalTimeBudget(globalTimeBudget);
+    browser.storage.local.set({ groupTimeBudgets: updatedBudgets.map(b => b.toJSON()) }, () => {
+      setGroupTimeBudgets(updatedBudgets);
       setGlobalWebsiteToDelete("");
     });
   }
@@ -265,20 +269,70 @@ function Options() {
     }
   }
 
+  const addNewGroupBudget = () => {
+    const newBudget = new GlobalTimeBudget(
+      new Set(),
+      { 0: 300, 1: 300, 2: 300, 3: 300, 4: 300, 5: 300, 6: 300 },
+      false,
+      false,
+      "",
+      new Date().toLocaleDateString('en-CA').slice(0, 10),
+      []
+    );
+
+    const updatedBudgets = [...groupTimeBudgets, newBudget];
+    browser.storage.local.set({ groupTimeBudgets: updatedBudgets.map(b => b.toJSON()) }, () => {
+      setGroupTimeBudgets(updatedBudgets);
+      setSelectedBudgetIndex(updatedBudgets.length - 1);
+    });
+  }
+
+  const deleteGroupBudget = (index: number) => {
+    // Always keep at least one budget
+    if (groupTimeBudgets.length <= 1) return;
+
+    const updatedBudgets = groupTimeBudgets.filter((_, i) => i !== index);
+    browser.storage.local.set({ groupTimeBudgets: updatedBudgets.map(b => b.toJSON()) }, () => {
+      setGroupTimeBudgets(updatedBudgets);
+      // Adjust selected index if necessary
+      if (selectedBudgetIndex >= updatedBudgets.length) {
+        setSelectedBudgetIndex(updatedBudgets.length - 1);
+      } else if (selectedBudgetIndex === index && selectedBudgetIndex > 0) {
+        setSelectedBudgetIndex(selectedBudgetIndex - 1);
+      }
+    });
+  }
+
+  const handleDeleteGroupBudget = (index: number) => {
+    if (groupTimeBudgets.length <= 1) return;
+    
+    setBudgetToDeleteIndex(index);
+    
+    if (requirePassword) {
+      setPasswordAction({
+        function: setDeleteBudgetDialogOpen,
+        params: [true]
+      })
+      setIsPasswordEntryDialogOpen(true);
+    } else {
+      setDeleteBudgetDialogOpen(true);
+    }
+  }
+
   const dayOfTheWeek = (new Date().getDay() + 6) % 7;
 
   useEffect(() => {
     selectCallToAction();
 
     // Retrieve related data from storage
-    browser.storage.local.get(['blockedWebsitesList', 'globalTimeBudget', 'settings', 'quotes'], (data) => {
+    browser.storage.local.get(['blockedWebsitesList', 'groupTimeBudgets', 'settings', 'quotes'], (data) => {
       if (data.blockedWebsitesList) {
         setBlockedWebsitesList(data.blockedWebsitesList);
       }
 
-      if (data.globalTimeBudget) {
-        const globalTimeBudget = GlobalTimeBudget.fromJSON(data.globalTimeBudget);
-        setGlobalTimeBudget(globalTimeBudget);
+      if (data.groupTimeBudgets && Array.isArray(data.groupTimeBudgets)) {
+        const budgets = data.groupTimeBudgets.map((b: any) => GlobalTimeBudget.fromJSON(b));
+        setGroupTimeBudgets(budgets);
       }
 
       if (data.settings.whiteListPathsEnabled !== undefined) {
@@ -406,13 +460,13 @@ function Options() {
               </Dialog>
             </TabsContent>
 
-            {/* BLOCKED WEBSITES TAB */}
+            {/* GROUP TIME BUDGETS TAB */}
             <TabsContent value="globalTimeBudget">
               <div className='mt-10 mb-5'>
 
-                <div className='flex items-center justify-between text-3xl font-bold w-full text-muted-foreground'>
+                <div className='flex items-center justify-between text-3xl font-bold w-full text-muted-foreground mb-8'>
                   <div className='flex items-center'>
-                    Group Time Budget
+                    Group Time Budgets
                     <TooltipProvider>
                       <Tooltip delayDuration={0}>
                         <TooltipTrigger asChild >
@@ -421,118 +475,172 @@ function Options() {
                           </button>
                         </TooltipTrigger>
                         <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                          Group time budget allows you to manage the time spent on a group of websites at once. <br />
-                          Whenever you visit each website time will be substracted from the group allowed time. <br />
-                          When the group timer hits 0, all websites from the group will be inaccessible.
+                          Group time budgets allow you to manage the time spent on groups of websites. <br />
+                          Whenever you visit a website, time will be subtracted from all group budgets containing it. <br />
+                          When a group timer hits 0, all websites from that group will be inaccessible.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-
                   </div>
-
-                  <div className='flex items-center'>
-                    <Button onClick={() => handleGlobalTimeBudgetEdit()}> <Pencil className='h-4 w-4 mr-2' /> Edit </Button>
-                    <Button className="ml-4" onClick={() => setIsAddGlobalTimeBudgetWebsiteDialogOpen(true)}> <Plus className='h-5 w-5 mr-1' /> Add Website </Button>
-                  </div>
-
                 </div>
 
-                <div className='mt-8 flex items-stretch w-full'>
-                  <div className='flex items-stretch w-full'>
-                    <Card >
-                      <CardHeader className="p-5">
-                        <CardTitle>Allowed Per Day</CardTitle>
-                      </CardHeader>
-                      <CardContent className={globalTimeBudget?.variableSchedule ? "p-5 pt-0 flex flex-wrap w-[280px]" : "p-5 pt-0 flex flex-wrap"}>
-                        {globalTimeBudget?.variableSchedule ? (
-                          Array.from({ length: 7 }, (_, i) => {
-                            const dayIndex = i; // Adjust the index to start from 1
-                            return (
-                              <div key={dayIndex} className="flex flex-col items-center mx-1 mt-1">
-                                <div
-                                  className={
-                                    dayIndex === dayOfTheWeek
-                                      ? "w-16 h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-primary text-muted-foreground select-none"
-                                      : "w-16 h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"
-                                  }
-                                >
-                                  {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
-                                  <div className="text-[0.8rem]">
-                                    {timeDisplayFormat(globalTimeBudget.timeAllowed[dayIndex], true)}
-                                  </div>
-                                </div>
+                {/* Display all budgets */}
+                {groupTimeBudgets.map((budget, budgetIndex) => {
+                  const isSelected = selectedBudgetIndex === budgetIndex;
+                  return (
+                    <div key={budgetIndex} className={`mb-6 p-4 rounded-xl ${isSelected ? 'bg-muted/80 border-2 border-primary' : 'bg-muted/50'} cursor-pointer transition-all`}
+                      onClick={() => setSelectedBudgetIndex(budgetIndex)}>
+                      
+                      <div className='flex items-center justify-between mb-4'>
+                        <div className='text-xl font-bold text-muted-foreground'>
+                          Budget {budgetIndex + 1}
+                          {budget.websites.size > 0 && (
+                            <span className='ml-2 text-sm font-normal'>({budget.websites.size} {budget.websites.size === 1 ? 'website' : 'websites'})</span>
+                          )}
+                        </div>
+                        <div className='flex items-center gap-2'>
+                          <Button size="sm" onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setSelectedBudgetIndex(budgetIndex);
+                            handleGlobalTimeBudgetEdit(); 
+                          }}> 
+                            <Pencil className='h-4 w-4 mr-2' /> Edit 
+                          </Button>
+                          <Button size="sm" onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setSelectedBudgetIndex(budgetIndex);
+                            setIsAddGlobalTimeBudgetWebsiteDialogOpen(true); 
+                          }}> 
+                            <Plus className='h-5 w-5 mr-1' /> Add Website 
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive" 
+                            disabled={groupTimeBudgets.length <= 1}
+                            onClick={(e) => { e.stopPropagation(); handleDeleteGroupBudget(budgetIndex); }}
+                          > 
+                            Delete Budget
+                          </Button>
+                        </div>
+                      </div>
 
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <div className='text-2xl font-medium text-muted-foreground'> {globalTimeBudget ? timeDisplayFormat(globalTimeBudget?.timeAllowed[0]) : "00:00"} </div>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    <Card className="ml-5 flex-1">
-                      <CardHeader className="p-5">
-                        <CardTitle>Time Left Today</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-5 pt-0">
-                        <div className='text-2xl font-medium text-muted-foreground'> {globalTimeBudget ? timeDisplayFormat(globalTimeBudget?.timeAllowed[dayOfTheWeek] - globalTimeBudget?.totalTime) : "00:00"} </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="ml-5 flex-1">
-                      <CardHeader className="p-5">
-                        <CardTitle>Redirects to</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-5 pt-0">
-                        <div className='text-2xl font-medium text-muted-foreground'> {globalTimeBudget ? (globalTimeBudget.redirectUrl == "" ? "Inspiration" : globalTimeBudget.redirectUrl) : "Inspiration"} </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="ml-5 flex-1">
-                      <CardHeader className="p-5">
-                        <CardTitle>Block in Incognito</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-5 pt-0">
-                        <div className='text-2xl font-medium text-muted-foreground'> {globalTimeBudget ? (globalTimeBudget.blockIncognito ? "Yes" : "No") : "No"} </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="ml-5">
-                      <CardHeader className="p-5">
-                        <CardTitle>Scheduled Block</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-5 pt-0 flex flex-wrap">
-                        <div className='text-lg font-medium text-muted-foreground'>
-                          {globalTimeBudget?.scheduledBlockRanges.length === 0 && "None"}
-                          {globalTimeBudget?.scheduledBlockRanges.map((range, index) => (
-                            <div key={index} className={index !== globalTimeBudget?.scheduledBlockRanges.length - 1 ? "mb-5" : ""}>
-                              {scheduledBlockDisplay(range)}
-                              <div className="flex flex-wrap items-center text-sm font-normal">
-                                {range.days.every(day => day) ? (
-                                  <div className="text-muted-foreground">Every Day</div>
-                                ) : (
-                                  Array.from({ length: 7 }, (_, i) => (
-                                    <div key={i} className="flex flex-col items-center">
-                                      <div
-                                        className={
-                                          range.days[i]
-                                            ? "w-7 h-7 mr-1 mt-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-primary text-muted-foreground select-none"
-                                            : "w-7 h-7 mr-1 mt-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"
-                                        }
-                                      >
-                                        {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
+                      <div className='flex items-stretch w-full gap-4'>
+                        <Card className="flex-1">
+                          <CardHeader className="p-5">
+                            <CardTitle>Allowed Per Day</CardTitle>
+                          </CardHeader>
+                          <CardContent className={budget.variableSchedule ? "p-5 pt-0 flex flex-wrap w-[280px]" : "p-5 pt-0 flex flex-wrap"}>
+                            {budget.variableSchedule ? (
+                              Array.from({ length: 7 }, (_, i) => {
+                                const dayIndex = i;
+                                return (
+                                  <div key={dayIndex} className="flex flex-col items-center mx-1 mt-1">
+                                    <div
+                                      className={
+                                        dayIndex === dayOfTheWeek
+                                          ? "w-16 h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-primary text-muted-foreground select-none"
+                                          : "w-16 h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"
+                                      }
+                                    >
+                                      {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
+                                      <div className="text-[0.8rem]">
+                                        {timeDisplayFormat(budget.timeAllowed[dayIndex], true)}
                                       </div>
                                     </div>
-                                  ))
-                                )}
-                              </div>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <div className='text-2xl font-medium text-muted-foreground'> {timeDisplayFormat(budget.timeAllowed[0])} </div>
+                            )}
+                          </CardContent>
+                        </Card>
+
+                        <Card className="flex-1">
+                          <CardHeader className="p-5">
+                            <CardTitle>Time Left Today</CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-5 pt-0">
+                            <div className='text-2xl font-medium text-muted-foreground'> {timeDisplayFormat(budget.timeAllowed[dayOfTheWeek] - budget.totalTime)} </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="flex-1">
+                          <CardHeader className="p-5">
+                            <CardTitle>Redirects to</CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-5 pt-0">
+                            <div className='text-2xl font-medium text-muted-foreground'> {budget.redirectUrl == "" ? "Inspiration" : budget.redirectUrl} </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="flex-1">
+                          <CardHeader className="p-5">
+                            <CardTitle>Block in Incognito</CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-5 pt-0">
+                            <div className='text-2xl font-medium text-muted-foreground'> {budget.blockIncognito ? "Yes" : "No"} </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="flex-1">
+                          <CardHeader className="p-5">
+                            <CardTitle>Scheduled Block</CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-5 pt-0 flex flex-wrap">
+                            <div className='text-lg font-medium text-muted-foreground'>
+                              {budget.scheduledBlockRanges.length === 0 && "None"}
+                              {budget.scheduledBlockRanges.map((range, index) => (
+                                <div key={index} className={index !== budget.scheduledBlockRanges.length - 1 ? "mb-5" : ""}>
+                                  {scheduledBlockDisplay(range)}
+                                  <div className="flex flex-wrap items-center text-sm font-normal">
+                                    {range.days.every((day: boolean) => day) ? (
+                                      <div className="text-muted-foreground">Every Day</div>
+                                    ) : (
+                                      Array.from({ length: 7 }, (_, i) => (
+                                        <div key={i} className="flex flex-col items-center">
+                                          <div
+                                            className={
+                                              range.days[i]
+                                                ? "w-7 h-7 mr-1 mt-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-primary text-muted-foreground select-none"
+                                                : "w-7 h-7 mr-1 mt-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"
+                                            }
+                                          >
+                                            {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
+                                          </div>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* Websites Table for this budget */}
+                      {budget.websites.size > 0 && (
+                        <div className="mt-4 rounded-xl bg-background/50 px-5 py-4">
+                          <GlobalTimeBudgetTable 
+                            globalTimeBudgetWebsites={budget.websites} 
+                            deleteBlockedWebsite={(websiteName: string) => handleDeleteGlobalBlockedWebsite(websiteName)} 
+                          />
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Add New Budget Button */}
+                <div className="flex justify-center mt-8">
+                  <Button
+                    onClick={addNewGroupBudget}
+                    className="rounded-full w-14 h-14 p-0"
+                    size="lg"
+                  >
+                    <Plus className='h-8 w-8' />
+                  </Button>
                 </div>
 
                 <Dialog open={isEditGlobalTimeBudgetDialogOpen} onOpenChange={() => { setIsEditGlobalTimeBudgetDialogOpen(false) }}>
@@ -541,7 +649,11 @@ function Options() {
                       <div className='bg-card m-2 p-4 rounded-md'>
                         <DialogTitle>Setup Group Time Budget</DialogTitle>
                         <DialogDescription>
-                          <GlobalTimeBudgetForm globalTimeBudgetProp={globalTimeBudget} callback={refreshGlobalTimeBudget} />
+                          <GlobalTimeBudgetForm 
+                            globalTimeBudgetProp={groupTimeBudgets[selectedBudgetIndex]} 
+                            callback={refreshGlobalTimeBudget} 
+                            budgetIndex={selectedBudgetIndex}
+                          />
                         </DialogDescription>
                       </div>
                     </ScrollArea>
@@ -552,18 +664,17 @@ function Options() {
                   <DialogContent className="bg-card" >
                     <ScrollArea className="max-h-[800px] ">
                       <div className='bg-card m-2 p-4 rounded-md'>
-                        <DialogTitle>Add Group Time Budget Website</DialogTitle>
+                        <DialogTitle>Add Website to Budget {selectedBudgetIndex + 1}</DialogTitle>
                         <DialogDescription>
-                          <GlobalTimeBudgetWebsiteForm callback={refreshGlobalTimeBudget} />
+                          <GlobalTimeBudgetWebsiteForm 
+                            callback={refreshGlobalTimeBudget} 
+                            budgetIndex={selectedBudgetIndex}
+                          />
                         </DialogDescription>
                       </div>
                     </ScrollArea>
                   </DialogContent>
                 </Dialog>
-              </div>
-
-              <div className="rounded-xl bg-muted/50 px-5 py-4" >
-                <GlobalTimeBudgetTable globalTimeBudgetWebsites={globalTimeBudget ? globalTimeBudget?.websites : null} deleteBlockedWebsite={(websiteName: string) => handleDeleteGlobalBlockedWebsite(websiteName)} />
               </div>
 
               <Dialog open={deleteGlobalDialogOpen} onOpenChange={setDeleteGlobalDialogOpen}>
@@ -573,7 +684,7 @@ function Options() {
                       Delete Group Time Budget Website
                     </DialogTitle>
                     <DialogDescription className='pt-2'>
-                      Are you sure you want to delete <span className='font-bold'>{globalWebsiteToDelete}</span>?
+                      Are you sure you want to delete <span className='font-bold'>{globalWebsiteToDelete}</span> from Budget {selectedBudgetIndex + 1}?
                     </DialogDescription>
                   </DialogHeader>
 
@@ -583,6 +694,27 @@ function Options() {
                       setDeleteGlobalDialogOpen(false);
                     }}>Delete</Button>
                     <Button type="submit" onClick={() => setDeleteGlobalDialogOpen(false)}>Close</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={deleteBudgetDialogOpen} onOpenChange={setDeleteBudgetDialogOpen}>
+                <DialogContent className="sm:max-w-[425px] p-6">
+                  <DialogHeader>
+                    <DialogTitle>
+                      Delete Group Time Budget
+                    </DialogTitle>
+                    <DialogDescription className='pt-2'>
+                      Are you sure you want to delete Budget {budgetToDeleteIndex + 1}? This will remove all {groupTimeBudgets[budgetToDeleteIndex]?.websites.size || 0} websites from this budget.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <DialogFooter className='pt-2'>
+                    <Button type="submit" variant={"destructive"} onClick={() => {
+                      deleteGroupBudget(budgetToDeleteIndex);
+                      setDeleteBudgetDialogOpen(false);
+                    }}>Delete Budget</Button>
+                    <Button type="submit" onClick={() => setDeleteBudgetDialogOpen(false)}>Close</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>

@@ -130,10 +130,25 @@
     /* Standard */
 }
 
+/* Remove spin buttons for WebKit browsers (Chrome, Safari, Edge) */
 .no-arrows::-webkit-inner-spin-button,
 .no-arrows::-webkit-outer-spin-button {
     -webkit-appearance: none;
-    /* Remove for Chrome */
     margin: 0;
-    /* Optional: reset margins */
+}
+
+/* Remove spin buttons for Firefox - using numeric input styling */
+.no-arrows[type='number'] {
+    -moz-appearance: textfield !important;
+}
+
+/* Additional Firefox fix for number inputs */
+input[type='number'].no-arrows {
+    -moz-appearance: textfield;
+}
+
+input[type='number'].no-arrows::-webkit-inner-spin-button,
+input[type='number'].no-arrows::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }

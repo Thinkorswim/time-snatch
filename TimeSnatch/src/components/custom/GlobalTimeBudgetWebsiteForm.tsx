@@ -9,9 +9,10 @@ import { GlobalTimeBudget } from '@/models/GlobalTimeBudget';
 
 interface GlobalTimeBudgetWebsiteFormProps {
     callback?: () => void; // Generic optional callback
+    budgetIndex?: number; // Index in the groupTimeBudgets array
 }
 
-export const GlobalTimeBudgetWebsiteForm: React.FC<GlobalTimeBudgetWebsiteFormProps> = ({ callback }) => {
+export const GlobalTimeBudgetWebsiteForm: React.FC<GlobalTimeBudgetWebsiteFormProps> = ({ callback, budgetIndex = 0 }) => {
     const [websiteValue, setWebsiteValue] = useState("");
     const [websiteSubDomainInfo, setWebsiteSubDomainInfo] = useState<React.ReactNode>(null);
     const [isValidWebsite, setIsValidWebsite] = useState(true);
@@ -30,17 +31,21 @@ export const GlobalTimeBudgetWebsiteForm: React.FC<GlobalTimeBudgetWebsiteFormPr
             const realUrl = extractHostnameAndDomain(websiteValue);
 
             if (realUrl) {
-                browser.storage.local.get(['globalTimeBudget'], (data) => {
-                    if (data.globalTimeBudget) {
-                        const globalTimeBudget = GlobalTimeBudget.fromJSON(data.globalTimeBudget);
-                        globalTimeBudget.websites.add(realUrl)
-
-                        browser.storage.local.set({ globalTimeBudget: globalTimeBudget.toJSON() }, () => {
+                browser.storage.local.get(['groupTimeBudgets'], (data) => {
+                    if (data.groupTimeBudgets && Array.isArray(data.groupTimeBudgets)) {
+                        const allBudgets = data.groupTimeBudgets.map((b: any) => GlobalTimeBudget.fromJSON(b));
+                        
+                        // Add website to the budget at the specified index
+                        if (budgetIndex >= 0 && budgetIndex < allBudgets.length) {
+                            allBudgets[budgetIndex].websites.add(realUrl);
+                        }
+                        
+                        browser.storage.local.set({ groupTimeBudgets: allBudgets.map(b => b.toJSON()) }, () => {
                             // Close the dialog
                             if (callback) {
                                 callback();
                             }
-                        })
+                        });
                     }
                 });
             } else {
