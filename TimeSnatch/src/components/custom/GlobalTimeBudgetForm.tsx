@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { validateURL, timeDisplayFormat, numberToDay } from '@/lib/utils';
 import { RoundSlider, ISettingsPointer } from 'mz-react-round-slider';
 import { GlobalTimeBudget } from '@/models/GlobalTimeBudget';
+import { syncUpdateGroupBudget } from '@/lib/sync';
 
 interface GlobalTimeBudgetFormProps {
     callback?: () => void; // Generic optional callback
@@ -256,6 +257,9 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                 }
                 
                 browser.storage.local.set({ groupTimeBudgets: allBudgets.map(b => b.toJSON()) }, () => {
+                    // Sync to backend (fire-and-forget)
+                    syncUpdateGroupBudget(budgetIndex, globalTimeBudget.toJSON());
+                    
                     // Close the dialog
                     if (callback) {
                         callback();

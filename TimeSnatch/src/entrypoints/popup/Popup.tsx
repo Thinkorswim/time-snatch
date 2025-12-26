@@ -8,8 +8,10 @@ import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProgressGlobal } from '@/components/ui/progress-global'
-import { Cog, ShieldBan, Component, ChartNoAxesColumn } from 'lucide-react'
+import { Cog, ShieldBan, Component, ChartNoAxesColumn, Sparkles } from 'lucide-react'
 import { storage } from 'wxt/storage';
+import { syncWebsites } from '@/lib/sync';
+import { User } from '@/models/User';
 
 
 function Popup() {
@@ -21,6 +23,7 @@ function Popup() {
   const [groupTimeBudgets, setGroupTimeBudgets] = useState<GlobalTimeBudget[]>([]);
   const [isHighlighted, setIsHighlighted] = useState(false);
   const [activeTab, setActiveTab] = useState('blockedWebsites');
+  const [isProUser, setIsProUser] = useState(false);
 
   const openStatisticsPage = () => {
     const url = browser.runtime.getURL('/options.html?section=statistics');
@@ -31,8 +34,20 @@ function Popup() {
   useEffect(() => {
     browser.runtime.connect();
 
-    // Retrieve the list of blocked websites from storage
-    browser.storage.local.get(["blockedWebsitesList", "groupTimeBudgets"], (data) => {
+    // Retrieve user and website data from storage
+    browser.storage.local.get(["user", "blockedWebsitesList", "groupTimeBudgets"], async (data) => {
+      // Set Pro user status
+      if (data.user?.isPro) {
+        setIsProUser(true);
+      }
+      
+      // Sync website data if user is Pro
+      if (data.user?.isPro && data.user?.authToken) {
+        await syncWebsites(data.user.authToken);
+        // Re-fetch data after sync
+        const updatedData = await browser.storage.local.get(["blockedWebsitesList", "groupTimeBudgets"]);
+        Object.assign(data, updatedData);
+      }
       if (data.blockedWebsitesList) {
         setBlockedWebsitesList(data.blockedWebsitesList);
 
@@ -70,15 +85,29 @@ function Popup() {
 
   return (
     <div className='w-full font-geist'>
-      <div className='mb-5 py-3 flex items-center px-5 bg-muted/80 rounded-b-2xl'>
+      <div className='mb-5 py-3 flex items-center px-4 bg-muted/80 rounded-b-2xl'>
         <div className='h-full w-full flex items-center justify-start '>
           <img src="/images/logo.svg" alt="Logo" className="w-5 h-5 mb-0.5" />
           <div className='text-chart-1 ml-2 font-black text-base'>
             Time Snatch
           </div>
         </div>
+        {isProUser ? (
+          <span className="mr-1 px-2 text-center py-0.5 w-24 text-xs bg-gradient-to-r from-chart-1 to-chart-3 text-white rounded-full font-semibold flex items-center justify-center">
+            <Sparkles className="inline-block w-3 h-3 mr-1" />
+            Plus
+          </span>
+        ) : (
+          <span
+            onClick={() => browser.runtime.openOptionsPage()}
+            className="mr-1 cursor-pointer w-36 px-1.5 text-center py-0.5 text-xs border text-chart-1 border-chart-1/50 rounded-full font-semibold flex items-center justify-center"
+          >
+            <Sparkles className="inline-block w-3 h-3 mr-1" />
+            Get Plus
+          </span>
+        )}
         <div className='flex items-center justify-end'>
-          <ChartNoAxesColumn className='w-5 h-5 text-chart-1 cursor-pointer mr-2' onClick={openStatisticsPage} />
+          <ChartNoAxesColumn className='w-5 h-5 text-chart-1 cursor-pointer mr-1' onClick={openStatisticsPage} />
           <Cog className='w-5 h-5 text-chart-1 cursor-pointer' onClick={() => browser.runtime.openOptionsPage()} />
         </div>
       </div>

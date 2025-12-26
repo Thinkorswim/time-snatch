@@ -6,6 +6,7 @@ import { Info } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { validateURL, extractHostnameAndDomain, hasSubdomain, extractHighLevelDomain } from '@/lib/utils';
 import { GlobalTimeBudget } from '@/models/GlobalTimeBudget';
+import { syncUpdateGroupBudget } from '@/lib/sync';
 
 interface GlobalTimeBudgetWebsiteFormProps {
     callback?: () => void; // Generic optional callback
@@ -41,6 +42,11 @@ export const GlobalTimeBudgetWebsiteForm: React.FC<GlobalTimeBudgetWebsiteFormPr
                         }
                         
                         browser.storage.local.set({ groupTimeBudgets: allBudgets.map(b => b.toJSON()) }, () => {
+                            // Sync to backend (fire-and-forget)
+                            if (budgetIndex >= 0 && budgetIndex < allBudgets.length) {
+                                syncUpdateGroupBudget(budgetIndex, allBudgets[budgetIndex].toJSON());
+                            }
+                            
                             // Close the dialog
                             if (callback) {
                                 callback();

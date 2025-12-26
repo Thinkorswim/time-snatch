@@ -17,7 +17,21 @@ import {
 } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Plus, Pencil, Info, ShieldBan, Component, Activity, Dot, UserCog, Settings, ChartNoAxesColumn } from 'lucide-react'
+import { Plus, Pencil, Info, ShieldBan, Component, Dot, Settings, ChartNoAxesColumn, Sparkles, CloudOff, CheckCircle2, RefreshCw } from 'lucide-react'
+import { loadUserFromStorage } from "@/lib/auth";
+import { 
+  getSyncStatus, 
+  subscribeSyncStatus, 
+  type SyncStatus,
+  syncDeleteWebsite, 
+  syncAll, 
+  syncAddGroupBudget, 
+  syncUpdateGroupBudget, 
+  syncDeleteGroupBudget, 
+  syncDeleteQuote, 
+  syncUpdateSettings 
+} from "@/lib/sync";
+import { User } from "@/models/User.ts";
 import {
   Card,
   CardContent,
@@ -37,6 +51,7 @@ import { QuotesTable } from '@/components/custom/QuotesTable';
 import { QuotesForm } from '@/components/custom/QuotesForm';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Switch } from '@/components/ui/switch';
+import { GMPlus } from './GMPlus';
 
 function Options() {
   const [isAddWebsiteDialogOpen, setIsWebsiteDialogOpen] = useState(false);
@@ -72,6 +87,70 @@ function Options() {
   const [quoteToDelete, setQuoteToDelete] = useState<{ author: string; quote: string } | null>(null);
 
   const [whiteListPathsEnabled, setWhiteListPathsEnabled] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(getSyncStatus());
+  const [user, setUser] = useState<User>(new User());
+
+  // Load user on mount
+  useEffect(() => {
+    const loadUser = async () => {
+      const loadedUser = await loadUserFromStorage();
+      if (loadedUser) {
+        setUser(loadedUser);
+      }
+    };
+    loadUser();
+
+    // Listen for user changes in storage (e.g., when user logs in)
+    const handleStorageChange = (changes: any, areaName: string) => {
+      if (areaName === 'local' && changes.user) {
+        const newUser = changes.user.newValue;
+        if (newUser) {
+          setUser(User.fromJSON(newUser));
+        } else {
+          setUser(new User());
+        }
+      }
+      
+      // Refresh data when sync updates storage
+      if (areaName === 'local') {
+        if (changes.blockedWebsitesList) {
+          setBlockedWebsitesList(changes.blockedWebsitesList.newValue || {});
+        }
+        if (changes.groupTimeBudgets) {
+          const budgets = (changes.groupTimeBudgets.newValue || []).map((b: any) => 
+            GlobalTimeBudget.fromJSON(b)
+          );
+          setGroupTimeBudgets(budgets);
+        }
+        if (changes.quotes) {
+          setQuotes(changes.quotes.newValue || []);
+        }
+        if (changes.settings) {
+          const newSettings = changes.settings.newValue;
+          if (newSettings) {
+            setRequirePassword(!!newSettings.password);
+            setWhiteListPathsEnabled(newSettings.whiteListPathsEnabled || false);
+          }
+        }
+      }
+    };
+
+    browser.storage.onChanged.addListener(handleStorageChange);
+    return () => browser.storage.onChanged.removeListener(handleStorageChange);
+  }, []);
+
+  // Subscribe to sync status changes and sync all data when settings page opens
+  useEffect(() => {
+    const unsubscribe = subscribeSyncStatus((status) => {
+      setSyncStatus(status);
+    });
+
+    if (user.isPro && user.authToken) {
+      syncAll(user.authToken);
+    }
+
+    return unsubscribe;
+  }, [user.isPro, user.authToken]);
 
 
   // on load set the active tab to the one that was last open
@@ -151,10 +230,20 @@ function Options() {
     delete newBlockedWebsitesList[websiteToDelete];
 
     browser.storage.local.set({ blockedWebsitesList: newBlockedWebsitesList }, () => {
+      syncDeleteWebsite(websiteToDelete);
+      
       setBlockedWebsitesList(newBlockedWebsitesList);
       setWebsiteToDelete("");
     });
   }
+
+  const handleForceSync = async () => {
+    if (!user.isPro || !user.authToken) {
+      return;
+    }
+
+    await syncAll(user.authToken);
+  };
 
 
   const deleteGlobalTimeBudgetWebsite = () => {
@@ -164,6 +253,9 @@ function Options() {
     updatedBudgets[selectedBudgetIndex].websites.delete(globalWebsiteToDelete);
 
     browser.storage.local.set({ groupTimeBudgets: updatedBudgets.map(b => b.toJSON()) }, () => {
+      // Sync to backend (fire-and-forget) - update the entire budget
+      syncUpdateGroupBudget(selectedBudgetIndex, updatedBudgets[selectedBudgetIndex].toJSON());
+      
       setGroupTimeBudgets(updatedBudgets);
       setGlobalWebsiteToDelete("");
     });
@@ -255,7 +347,10 @@ function Options() {
     setWhiteListPathsEnabled(checked);
     browser.storage.local.get(['settings'], (data) => {
       const settings = { ...data.settings, whiteListPathsEnabled: checked };
-      browser.storage.local.set({ settings: settings });
+      browser.storage.local.set({ settings: settings }, () => {
+        // Sync to backend (fire-and-forget)
+        syncUpdateSettings({ whiteListPathsEnabled: checked });
+      });
     });
 
     if (!checked) {
@@ -282,6 +377,9 @@ function Options() {
 
     const updatedBudgets = [...groupTimeBudgets, newBudget];
     browser.storage.local.set({ groupTimeBudgets: updatedBudgets.map(b => b.toJSON()) }, () => {
+      // Sync to backend (fire-and-forget)
+      syncAddGroupBudget(newBudget.toJSON());
+      
       setGroupTimeBudgets(updatedBudgets);
       setSelectedBudgetIndex(updatedBudgets.length - 1);
     });
@@ -293,6 +391,9 @@ function Options() {
 
     const updatedBudgets = groupTimeBudgets.filter((_, i) => i !== index);
     browser.storage.local.set({ groupTimeBudgets: updatedBudgets.map(b => b.toJSON()) }, () => {
+      // Sync to backend (fire-and-forget)
+      syncDeleteGroupBudget(index);
+      
       setGroupTimeBudgets(updatedBudgets);
       // Adjust selected index if necessary
       if (selectedBudgetIndex >= updatedBudgets.length) {
@@ -382,9 +483,16 @@ function Options() {
   const deleteQuote = () => {
     if (!quoteToDelete || !quotes) return;
 
+    const quoteIndex = quotes.findIndex(quote => quote.author === quoteToDelete.author && quote.quote === quoteToDelete.quote);
     const newQuotes = quotes?.filter(quote => !(quote.author === quoteToDelete.author && quote.quote === quoteToDelete.quote));
+    
     setQuotes(newQuotes);
-    browser.storage.local.set({ quotes: newQuotes });
+    browser.storage.local.set({ quotes: newQuotes }, () => {
+      // Sync to backend (fire-and-forget)
+      if (quoteIndex !== -1) {
+        syncDeleteQuote(quoteIndex);
+      }
+    });
   }
 
 
@@ -403,7 +511,49 @@ function Options() {
                 <TabsTrigger className='data-[state=active]:shadow-none' value="globalTimeBudget"><Component className='w-5 h-5 mr-1' /> Group Time Budget</TabsTrigger>
                 <TabsTrigger className='data-[state=active]:shadow-none' value="statistics" onClick={handleStatisticsLoad}><ChartNoAxesColumn className='w-5 h-5 mr-1' /> Statistics </TabsTrigger>
                 <TabsTrigger className='data-[state=active]:shadow-none' value="settings" ><Settings className='w-5 h-5 mr-1' />  Settings</TabsTrigger>
+                <TabsTrigger className='data-[state=active]:shadow-none' value="gmplus" ><Sparkles className='w-5 h-5 mr-1' />  GM Plus</TabsTrigger>
               </TabsList>
+              {/* Sync status indicator - only show for Pro users */}
+              {user.isPro && (
+                <div className="flex items-center space-x-3 ml-4">
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    {syncStatus === "idle" && (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Synced</span>
+                      </>
+                    )}
+                    {syncStatus === "syncing" && (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-pulse" />
+                        <span>Syncing...</span>
+                      </>
+                    )}
+                    {syncStatus === "success" && (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Synced</span>
+                      </>
+                    )}
+                    {syncStatus === "error" && (
+                      <>
+                        <CloudOff className="w-4 h-4 text-destructive" />
+                        <span className="text-destructive">Sync failed</span>
+                      </>
+                    )}
+                  </div>
+                  <Button
+                    onClick={handleForceSync}
+                    disabled={syncStatus === "syncing"}
+                    size="sm"
+                    variant="outline"
+                    className="h-8 hover:bg-muted/50 transition-colors shadow-none border-muted-foreground/50 text-muted-foreground"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                    Sync Now
+                  </Button>
+                </div>
+              )}
             </div>
 
 
@@ -790,6 +940,11 @@ function Options() {
               </div>
             </TabsContent>
 
+            {/* GM PLUS TAB */}
+            <TabsContent value="gmplus">
+              <GMPlus />
+            </TabsContent>
+
             <Dialog open={addQuoteDialogOpen} onOpenChange={() => { setAddQuoteDialogOpen(false) }}>
               <DialogContent className="bg-card" >
                 <ScrollArea className="max-h-[800px] ">
@@ -879,7 +1034,9 @@ function Options() {
 
         <footer className="bg-muted rounded-t-lg py-5 px-8 mt-10">
           <div className="container mx-auto flex justify-between items-center text-xs">
-            <div className="flex items-center text-muted-foreground font-semibold"> <img src="/images/gm_logo.svg" alt="Grounded Momentum Logo" className="w-6 h-6 mr-2" /> Grounded Momentum <Dot className='w-2 h-2 mx-1' /> 2025 </div>
+            <a href="https://groundedmomentum.com/" target="_blank" rel="noopener noreferrer" className="flex items-center text-muted-foreground font-semibold transition-colors">
+              <img src="/images/gm_logo.svg" alt="Grounded Momentum Logo" className="w-6 h-6 mr-2" /> Grounded Momentum <Dot className='w-2 h-2 mx-1' /> 2026
+            </a>
             {ctaProperty === 'discord' ? (
               <div className="flex items-center text-muted-foreground font-semibold">
                 {ctaDiscordText}

@@ -3,6 +3,7 @@ import { GlobalTimeBudget } from "@/models/GlobalTimeBudget";
 import { timeDisplayFormatBadge, extractHostnameAndDomain, extractPathnameAndParams, validateURL, scheduledBlockDisplay } from "@/lib/utils";
 import { defaultQuotes } from "@/entrypoints/inspiration/quotes";
 import { Settings } from "@/models/Settings";
+import { syncWebsitesIfNeeded, syncTimeUpdate, syncPushAll, TIME_SYNC_INTERVAL } from "@/lib/sync";
 
 export default defineBackground(() => {
     browser.runtime.onInstalled.addListener((object) => {
@@ -258,11 +259,49 @@ export default defineBackground(() => {
         });
     });
 
-    const stopCurrentBlocking = () => {
+    // Track current blocking for time sync
+    let lastTimeSyncTime = 0;
+    let currentSyncData: {
+        website: string | null;
+        blockedWebsite: BlockedWebsite | null;
+        groupBudgetIndex: number | null;
+        groupBudget: GlobalTimeBudget | null;
+    } | null = null;
+
+    const syncCurrentTime = async () => {
+        if (!currentSyncData) return;
+        
+        const today = new Date().toLocaleDateString('en-CA').slice(0, 10);
+        const { website, blockedWebsite, groupBudgetIndex, groupBudget } = currentSyncData;
+
+        // Get current daily statistics
+        const data = await browser.storage.local.get(['dailyStatistics']);
+        const dailyStatistics = data.dailyStatistics || null;
+
+        await syncTimeUpdate({
+            ...(website && blockedWebsite ? {
+                website,
+                blockedWebsite: { totalTime: blockedWebsite.totalTime, lastAccessedDate: today }
+            } : {}),
+            ...(groupBudgetIndex !== null && groupBudget ? {
+                groupBudgetIndex,
+                groupBudget: { totalTime: groupBudget.totalTime, lastAccessedDate: today }
+            } : {}),
+            ...(dailyStatistics ? { dailyStatistics } : {})
+        });
+
+        lastTimeSyncTime = Date.now();
+    };
+
+    const stopCurrentBlocking = async () => {
         if (activeBlockTimer != null) {
             clearInterval(activeBlockTimer);
             activeBlockTimer = null;
             setBadge("");
+
+            // Sync before stopping
+            await syncCurrentTime();
+            currentSyncData = null;
         }
     }
 
@@ -277,9 +316,10 @@ export default defineBackground(() => {
         }, 200); // Adjust delay as needed
     };
 
-    
+    const checkUrlBlockStatus = async (tab: chrome.tabs.Tab) => {
+        // Sync website data from backend if needed (Pro users only, throttled)
+        await syncWebsitesIfNeeded();
 
-    const checkUrlBlockStatus = (tab: chrome.tabs.Tab) => {
         browser.storage.local.get(['blockedWebsitesList', 'groupTimeBudgets'], (data) => {
             if (!data.blockedWebsitesList) return;
 
@@ -299,8 +339,11 @@ export default defineBackground(() => {
 
             // Reset daily times if it is a new day
             const today = new Date().toLocaleDateString('en-CA').slice(0, 10);
+            let dayReset = false;
+
             if (websiteNames.length > 0 && blockedWebsites[websiteNames[0]].lastAccessedDate !== today) {
                 resetDailyTimers(data.blockedWebsitesList);
+                dayReset = true;
             }
 
             // Reset group budgets if it's a new day
@@ -319,7 +362,13 @@ export default defineBackground(() => {
                         groupTimeBudgets: groupTimeBudgets.map(b => b.toJSON()) 
                     });
                     updateHistoricalData();
+                    dayReset = true;
                 }
+            }
+
+            // Sync once after all resets
+            if (dayReset) {
+                syncPushAll();
             }
 
             const currentTabUrl = extractHostnameAndDomain(tab.url!);
@@ -450,7 +499,16 @@ export default defineBackground(() => {
 
     const updateTime = (blockedWebsite: BlockedWebsite | null, groupBudgets: GlobalTimeBudget[] | null, groupBudgetIndices: number[] | null, tab: chrome.tabs.Tab) => {
         const dayOfTheWeek = (new Date().getDay() + 6) % 7;
+        const today = new Date().toLocaleDateString('en-CA').slice(0, 10);
         let currentUrl = extractHostnameAndDomain(tab.url!);
+
+        // Update tracking state for sync (use first group budget if multiple)
+        currentSyncData = {
+            website: blockedWebsite?.website || null,
+            blockedWebsite,
+            groupBudgetIndex: groupBudgetIndices && groupBudgetIndices.length > 0 ? groupBudgetIndices[0] : null,
+            groupBudget: groupBudgets && groupBudgets.length > 0 ? groupBudgets[0] : null,
+        };
         
         browser.storage.local.get(['dailyStatistics'], (data) => {
             if (data.dailyStatistics) {
@@ -529,6 +587,11 @@ export default defineBackground(() => {
             const badgeTime = getMostRestrictiveBadgeTime(null, groupBudgets, dayOfTheWeek);
             setBadge(badgeTime === -1 ? "" : timeDisplayFormatBadge(badgeTime));
         }
+
+        // Sync time data to backend every 30 seconds
+        if (Date.now() - lastTimeSyncTime >= TIME_SYNC_INTERVAL) {
+            syncCurrentTime();
+        }
     }
 
     const checkScheduledBlock = (scheduledBlockRanges: Array<{ start: number; end: number, days: boolean[] }>, redirectUrl: string, tab: chrome.tabs.Tab, globalBudget: boolean) => {
@@ -564,13 +627,16 @@ export default defineBackground(() => {
     }
 
     const redirectToUrl = (url: string, tabId: number, website: string = "Others", redirectReason: string | null = null) => {
-        browser.storage.local.get(['dailyStatistics'], (data) => {
+        browser.storage.local.get(['dailyStatistics'], async (data) => {
             if (data.dailyStatistics) {
                 const dailyStatistics = data.dailyStatistics;
                 dailyStatistics['blockedPerDay'][website] = dailyStatistics['blockedPerDay'][website] || 0;
                 dailyStatistics['blockedPerDay'][website] += 1;
                 
-                browser.storage.local.set({ dailyStatistics: dailyStatistics });
+                await browser.storage.local.set({ dailyStatistics: dailyStatistics });
+
+                // Sync the updated statistics
+                syncTimeUpdate({ dailyStatistics });
             }
         });
 

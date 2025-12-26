@@ -15,6 +15,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { encryptPassword, compareEncrypted } from '@/lib/utils';
+import { syncUpdateSettings } from '@/lib/sync';
 
 export function PasswordProtection({
   requirePassword,
@@ -52,7 +53,11 @@ export function PasswordProtection({
     if (password === passwordConfirm) {
       const hashedPassword = await encryptPassword(password);
       browser.storage.local.get(['settings'], (data) => {
-        browser.storage.local.set({ settings: { ...data.settings, password: hashedPassword } });
+        const updatedSettings = { ...data.settings, password: hashedPassword };
+        browser.storage.local.set({ settings: updatedSettings }, () => {
+          // Sync to backend (fire-and-forget)
+          syncUpdateSettings({ password: hashedPassword });
+        });
       });
       setPasswordSaved(true);
       setIsPasswordSetDialogOpen(false);
@@ -106,7 +111,11 @@ export function PasswordProtection({
           setErrorMsg("");
 
           // Remove password from storage
-          browser.storage.local.set({ settings: { ...data.settings, password: "" } });
+          const updatedSettings = { ...data.settings, password: "" };
+          browser.storage.local.set({ settings: updatedSettings }, () => {
+            // Sync to backend (fire-and-forget)
+            syncUpdateSettings({ password: "" });
+          });
         } else {
           setErrorMsg("Incorrect password");
         }

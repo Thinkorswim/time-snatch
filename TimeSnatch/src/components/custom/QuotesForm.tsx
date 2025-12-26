@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Button } from '@/components/ui/button';
+import { syncAddQuote } from '@/lib/sync';
 
 interface QuotesFormProps {
     callback?: () => void; // Generic optional callback
@@ -40,6 +41,9 @@ export const QuotesForm: React.FC<QuotesFormProps> = ({ callback }) => {
                     } else {
                         quotes.push(newQuote);
                         browser.storage.local.set({ quotes: quotes }, () => {
+                            // Sync to backend (fire-and-forget)
+                            syncAddQuote(newQuote);
+                            
                             if (callback) {
                                 callback();
                             }

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { BlockedWebsite } from '@/models/BlockedWebsite';
 import { validateURL, extractHostnameAndDomain, extractPathnameAndParams, updateObjectKeyAndData, hasSubdomain, extractHighLevelDomain, timeDisplayFormat, numberToDay } from '@/lib/utils';
 import { RoundSlider, ISettingsPointer } from 'mz-react-round-slider';
+import { syncAddWebsite, syncUpdateWebsite } from '@/lib/sync';
 
 interface BlockedWebsiteFormProps {
     callback?: () => void; // Generic optional callback
@@ -319,6 +320,15 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
             }
 
             browser.storage.local.set({ blockedWebsitesList: updatedList }, () => {
+                // Sync to backend (fire-and-forget)
+                if (blockedWebsiteProp) {
+                    // Editing existing website
+                    syncUpdateWebsite(blockedWebsite.toJSON());
+                } else {
+                    // Adding new website
+                    syncAddWebsite(blockedWebsite.toJSON());
+                }
+
                 // Close the dialog
                 if (callback) {
                     callback();
