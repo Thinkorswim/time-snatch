@@ -157,9 +157,15 @@ function Options() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const section = params.get('section');
-    if (section && section == "statistics") {
-      setActiveTab("statistics");
-      handleStatisticsLoad();
+    if (section) {
+      if (section === "statistics") {
+        setActiveTab("statistics");
+        handleStatisticsLoad();
+      } else if (section === "gmplus") {
+        setActiveTab("gmplus");
+      } else {
+        setActiveTab(section);
+      }
     }
   }, []);
 
@@ -511,7 +517,7 @@ function Options() {
                 <TabsTrigger className='data-[state=active]:shadow-none' value="globalTimeBudget"><Component className='w-5 h-5 mr-1' /> Group Time Budget</TabsTrigger>
                 <TabsTrigger className='data-[state=active]:shadow-none' value="statistics" onClick={handleStatisticsLoad}><ChartNoAxesColumn className='w-5 h-5 mr-1' /> Statistics </TabsTrigger>
                 <TabsTrigger className='data-[state=active]:shadow-none' value="settings" ><Settings className='w-5 h-5 mr-1' />  Settings</TabsTrigger>
-                <TabsTrigger className='data-[state=active]:shadow-none' value="gmplus" ><Sparkles className='w-5 h-5 mr-1' />  GM Plus</TabsTrigger>
+                <TabsTrigger className='data-[state=active]:shadow-none ml-1 bg-gradient-to-r from-chart-1 to-chart-3 text-white data-[state=active]:text-white transition-all duration-100 hover:scale-105' value="gmplus" ><Sparkles className='w-5 h-5 mr-1' />  GM Plus</TabsTrigger>
               </TabsList>
               {/* Sync status indicator - only show for Pro users */}
               {user.isPro && (

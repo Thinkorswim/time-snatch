@@ -39,7 +39,7 @@ const apiRequest = async <T>(
   options: ApiRequestOptions = {},
   errorMessage: string
 ): Promise<T> => {
-  const { method = "POST", body, authToken, credentials = "omit" } = options;
+  const { method = "POST", body, authToken } = options;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -52,7 +52,6 @@ const apiRequest = async <T>(
   const response = await fetch(`${BASE_URL}${endpoint}`, {
     method,
     headers,
-    credentials,
     ...(body && { body: JSON.stringify(body) }),
   });
 
@@ -157,7 +156,7 @@ export const signOutRequest = async (authToken: string): Promise<{ message: stri
     clearUserFromStorage();
     return await apiRequest(
       "/api/auth/sign-out",
-      { authToken, credentials: "include", body: {} },
+      { authToken, body: {} },
       "Sign out failed"
     );
   } catch (error) {

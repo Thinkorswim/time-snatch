@@ -31,6 +31,39 @@ function Popup() {
   }
 
 
+  // Helper to update state with website data and handle highlighting
+  const updateWebsiteData = (blockedWebsites: Record<string, BlockedWebsite>, groupBudgets: GlobalTimeBudget[]) => {
+    browser.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs && tabs.length > 0 && tabs[0].url) {
+        const website = extractHostnameAndDomain(tabs[0].url);
+        if (website) {
+          const websites = Object.keys(blockedWebsites);
+          if (websites.includes(website)) {
+            // Move current website to top and highlight it
+            const updatedBlockedWebsitesList = {
+              [website]: blockedWebsites[website],
+              ...Object.fromEntries(Object.entries(blockedWebsites).filter(([key]) => key !== website))
+            };
+            setBlockedWebsitesList(updatedBlockedWebsitesList);
+            setIsHighlighted(true);
+          } else {
+            setBlockedWebsitesList(blockedWebsites);
+            // Check if current website is in any group budget
+            const isInGroupBudget = groupBudgets.some(budget => budget.websites.has(website));
+            if (isInGroupBudget) {
+              setActiveTab('globalTimeBudget');
+            }
+          }
+        } else {
+          setBlockedWebsitesList(blockedWebsites);
+        }
+      } else {
+        setBlockedWebsitesList(blockedWebsites);
+      }
+    });
+    setGroupTimeBudgets(groupBudgets);
+  };
+
   useEffect(() => {
     browser.runtime.connect();
 
@@ -41,44 +74,29 @@ function Popup() {
         setIsProUser(true);
       }
       
-      // Sync website data if user is Pro
-      if (data.user?.isPro && data.user?.authToken) {
-        await syncWebsites(data.user.authToken);
-        // Re-fetch data after sync
-        const updatedData = await browser.storage.local.get(["blockedWebsitesList", "groupTimeBudgets"]);
-        Object.assign(data, updatedData);
-      }
-      if (data.blockedWebsitesList) {
-        setBlockedWebsitesList(data.blockedWebsitesList);
+      // Parse group budgets
+      const groupBudgets = data.groupTimeBudgets && Array.isArray(data.groupTimeBudgets)
+        ? data.groupTimeBudgets.map((b: any) => GlobalTimeBudget.fromJSON(b))
+        : [];
 
-        browser.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          if (tabs && tabs.length > 0 && tabs[0].url) {
-            const website = extractHostnameAndDomain(tabs[0].url);
-            if (website) {
-              const websites = Object.keys(data.blockedWebsitesList);
-              if (websites.includes(website)) {
-                const updatedBlockedWebsitesList = {
-                  [website]: data.blockedWebsitesList[website],
-                  ...Object.fromEntries(Object.entries(data.blockedWebsitesList).filter(([key]) => key !== website))
-                };
-                setBlockedWebsitesList(updatedBlockedWebsitesList);
-                setIsHighlighted(true);
-              } else if (data.groupTimeBudgets && Array.isArray(data.groupTimeBudgets)) {
-                // Check if current website is in any group budget
-                const budgets = data.groupTimeBudgets.map((b: any) => GlobalTimeBudget.fromJSON(b));
-                const isInGroupBudget = budgets.some(budget => budget.websites.has(website));
-                if (isInGroupBudget) {
-                  setActiveTab('globalTimeBudget');
-                }
-              }
-            }
+      // Show local data immediately
+      if (data.blockedWebsitesList) {
+        updateWebsiteData(data.blockedWebsitesList, groupBudgets);
+      } else {
+        setGroupTimeBudgets(groupBudgets);
+      }
+      
+      // Sync website data in background if user is Pro, then update UI
+      if (data.user?.isPro && data.user?.authToken) {
+        syncWebsites(data.user.authToken).then(async () => {
+          const updatedData = await browser.storage.local.get(["blockedWebsitesList", "groupTimeBudgets"]);
+          const updatedBudgets = updatedData.groupTimeBudgets && Array.isArray(updatedData.groupTimeBudgets)
+            ? updatedData.groupTimeBudgets.map((b: any) => GlobalTimeBudget.fromJSON(b))
+            : [];
+          if (updatedData.blockedWebsitesList) {
+            updateWebsiteData(updatedData.blockedWebsitesList, updatedBudgets);
           }
         });
-      }
-
-      if (data.groupTimeBudgets && Array.isArray(data.groupTimeBudgets)) {
-        const budgets = data.groupTimeBudgets.map((b: any) => GlobalTimeBudget.fromJSON(b));
-        setGroupTimeBudgets(budgets);
       }
     });
   }, []);
@@ -93,14 +111,23 @@ function Popup() {
           </div>
         </div>
         {isProUser ? (
-          <span className="mr-1 px-2 text-center py-0.5 w-24 text-xs bg-gradient-to-r from-chart-1 to-chart-3 text-white rounded-full font-semibold flex items-center justify-center">
+          <span
+            onClick={() => {
+              const url = browser.runtime.getURL('/options.html?section=gmplus');
+              browser.tabs.create({ url });
+            }}
+            className="mr-1 cursor-pointer px-2 text-center py-0.5 w-24 text-xs bg-gradient-to-r from-chart-1 to-chart-3 text-white rounded-full font-semibold flex items-center justify-center transition-all duration-100 hover:scale-105"
+          >
             <Sparkles className="inline-block w-3 h-3 mr-1" />
             Plus
           </span>
         ) : (
           <span
-            onClick={() => browser.runtime.openOptionsPage()}
-            className="mr-1 cursor-pointer w-36 px-1.5 text-center py-0.5 text-xs border text-chart-1 border-chart-1/50 rounded-full font-semibold flex items-center justify-center"
+            onClick={() => {
+              const url = browser.runtime.getURL('/options.html?section=gmplus');
+              browser.tabs.create({ url });
+            }}
+            className="mr-1 cursor-pointer w-36 px-1.5 text-center py-0.5 text-xs border  bg-gradient-to-r from-chart-1 to-chart-3 text-white border-chart-1/50 rounded-full font-semibold flex items-center justify-center transition-all duration-100 hover:scale-105"
           >
             <Sparkles className="inline-block w-3 h-3 mr-1" />
             Get Plus
