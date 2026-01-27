@@ -1,88 +1,82 @@
 import { exec } from "child_process";
 import { promisify } from "util";
-import { rename, unlink, access } from "fs/promises";
+import { readdir, rename, unlink } from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Setup __dirname in ESM
+// ESM __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// dist directory
 const DIST_DIR = path.join(__dirname, "../dist");
 
-// Convert exec to promise-based
+// Promisified exec
 const execAsync = promisify(exec);
 
-// Helper to wait for file to exist
-const waitForFile = async (filePath, maxAttempts = 10) => {
-  for (let i = 0; i < maxAttempts; i++) {
-    try {
-      await access(filePath);
-      return true;
-    } catch {
-      await new Promise(resolve => setTimeout(resolve, 500));
+// Small delay to avoid CI FS race conditions
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Run a command, then find & rename a zip file in dist/
+ */
+const runAndRenameZip = async ({ command, filter, renameTo }) => {
+  if (command) {
+    const { stderr } = await execAsync(command);
+
+    if (stderr && !stderr.includes("Some chunks are larger than 500 kB")) {
+      console.warn(`Warning from "${command}":\n${stderr}`);
     }
+
+    console.log(`Zip creation succeeded for command: "${command}"`);
   }
-  return false;
+
+  // CI filesystem can lag slightly
+  await sleep(300);
+
+  const files = await readdir(DIST_DIR);
+  const match = files.find(filter);
+
+  if (!match) {
+    console.error("No matching zip found");
+    console.error("Files in dist/:", files);
+    throw new Error("Zip file not found");
+  }
+
+  const from = path.join(DIST_DIR, match);
+  const to = path.join(DIST_DIR, renameTo);
+
+  await unlink(to).catch(() => {});
+  await rename(from, to);
+
+  console.log(`Renamed: ${match} → ${renameTo}`);
 };
 
-const renameZip = async ({ command, expectedZips }) => {
-  const { stdout, stderr } = await execAsync(command);
-  
-  if (stderr && !stderr.includes('Some chunks are larger than 500 kB')) {
-    console.error(`⚠ Warning from ${command}:\n${stderr}`);
-  }
-  
-  console.log(stdout);
-  
-  for (const [matchPattern, newName] of expectedZips) {
-    const match = stdout.match(matchPattern);
-    if (!match) {
-      console.error(`❌ Could not find match for: ${matchPattern}`);
-      continue;
-    }
-    
-    const original = path.join(DIST_DIR, path.basename(match[0]));
-    const renamed = path.join(DIST_DIR, newName);
-    
-    // Wait for file to exist
-    const exists = await waitForFile(original);
-    if (!exists) {
-      console.error(`❌ File not found after waiting: ${original}`);
-      continue;
-    }
-    
-    try {
-      // Remove existing file if it exists
-      await unlink(renamed).catch(() => {});
-      await rename(original, renamed);
-      console.log(`✔ Renamed: ${path.basename(original)} → ${newName}`);
-    } catch (err) {
-      console.error(`❌ Failed to rename ${original}: ${err}`);
-    }
-  }
-};
-
-// Chrome
-await renameZip({
+/* -------------------- Chrome -------------------- */
+await runAndRenameZip({
   command: "npm run zip",
-  expectedZips: [
-    [/dist\/([^\s]+chrome\.zip)/, "time-snatch-chrome.zip"]
-  ]
+  filter: (f) => f.endsWith("-chrome.zip"),
+  renameTo: "time-snatch-chrome.zip",
 });
 
-// Firefox
-await renameZip({
+/* -------------------- Firefox -------------------- */
+await runAndRenameZip({
   command: "npm run zip:firefox",
-  expectedZips: [
-    [/dist\/([^\s]+firefox\.zip)/, "time-snatch-firefox.zip"],
-    [/dist\/([^\s]+sources\.zip)/, "time-snatch-firefox-sources.zip"]
-  ]
+  filter: (f) => f.endsWith("-firefox.zip"),
+  renameTo: "time-snatch-firefox.zip",
 });
 
-// Edge
-await renameZip({
-  command: "npm run zip:edge",
-  expectedZips: [
-    [/dist\/([^\s]+edge\.zip)/, "time-snatch-edge.zip"]
-  ]
+await runAndRenameZip({
+  command: null, // already created by previous step
+  filter: (f) => f.endsWith("-sources.zip"),
+  renameTo: "time-snatch-firefox-sources.zip",
 });
+
+/* -------------------- Edge -------------------- */
+await runAndRenameZip({
+  command: "npm run zip:edge",
+  filter: (f) => f.endsWith("-edge.zip"),
+  renameTo: "time-snatch-edge.zip",
+});
+
+console.log("All extension zips created and renamed successfully");
