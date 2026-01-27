@@ -1,6 +1,6 @@
 import { exec } from "child_process";
 import { promisify } from "util";
-import { rename, unlink } from "fs/promises";
+import { rename, unlink, access } from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -12,10 +12,23 @@ const DIST_DIR = path.join(__dirname, "../dist");
 // Convert exec to promise-based
 const execAsync = promisify(exec);
 
+// Helper to wait for file to exist
+const waitForFile = async (filePath, maxAttempts = 10) => {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      await access(filePath);
+      return true;
+    } catch {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+  return false;
+};
+
 const renameZip = async ({ command, expectedZips }) => {
   const { stdout, stderr } = await execAsync(command);
   
-  if (stderr) {
+  if (stderr && !stderr.includes('Some chunks are larger than 500 kB')) {
     console.error(`⚠ Warning from ${command}:\n${stderr}`);
   }
   
@@ -27,8 +40,17 @@ const renameZip = async ({ command, expectedZips }) => {
       console.error(`❌ Could not find match for: ${matchPattern}`);
       continue;
     }
+    
     const original = path.join(DIST_DIR, path.basename(match[0]));
     const renamed = path.join(DIST_DIR, newName);
+    
+    // Wait for file to exist
+    const exists = await waitForFile(original);
+    if (!exists) {
+      console.error(`❌ File not found after waiting: ${original}`);
+      continue;
+    }
+    
     try {
       // Remove existing file if it exists
       await unlink(renamed).catch(() => {});
