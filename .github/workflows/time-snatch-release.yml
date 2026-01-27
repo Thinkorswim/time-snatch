@@ -16,59 +16,32 @@ jobs:
         working-directory: TimeSnatch
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: 'npm'
-          cache-dependency-path: 'TimeSnatch/package-lock.json'
+          cache: npm
+          cache-dependency-path: TimeSnatch/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Deploy (create zips)
+      - name: Build & zip extensions
         run: npm run deploy
 
-      - name: Get package version
-        id: get_version
+      - name: Read package version
+        id: version
         run: |
-            echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"   
+          echo "value=$(node -e "console.log(require('./package.json').version)")" >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub release and upload assets
+        uses: softprops/action-gh-release@v2
         with:
-            tag_name: v${{ steps.get_version.outputs.version }}
-            release_name: Time Snatch v${{ steps.get_version.outputs.version }}
-            body: Auto-generated release
-            draft: false
-            prerelease: false
-
-      - name: Upload Chrome zip
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: TimeSnatch/dist/time-snatch-chrome.zip
-          asset_name: time-snatch-chrome.zip
-          asset_content_type: application/zip
-
-      - name: Upload Firefox zip
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: TimeSnatch/dist/time-snatch-firefox.zip
-          asset_name: time-snatch-firefox.zip
-          asset_content_type: application/zip
-
-      - name: Upload Edge zip
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: TimeSnatch/dist/time-snatch-edge.zip
-          asset_name: time-snatch-edge.zip
-          asset_content_type: application/zip
+          tag_name: v${{ steps.version.outputs.value }}
+          name: Time Snatch v${{ steps.version.outputs.value }}
+          body: Auto-generated release
+          files: |
+            TimeSnatch/dist/time-snatch-chrome.zip
+            TimeSnatch/dist/time-snatch-firefox.zip
+            TimeSnatch/dist/time-snatch-edge.zip
