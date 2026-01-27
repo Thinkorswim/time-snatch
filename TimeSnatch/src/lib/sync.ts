@@ -69,6 +69,36 @@ const historicalToLocal = (arr: Array<{ date: string; data: Array<{ website: str
   return result;
 };
 
+// Helper: Merge two historical data objects (date -> website -> value)
+// Later values (localData) take precedence over earlier values (backendData)
+const mergeHistoricalData = (
+  backendData: Record<string, Record<string, number>>,
+  localData: Record<string, Record<string, number>>
+): Record<string, Record<string, number>> => {
+  const merged: Record<string, Record<string, number>> = { ...backendData };
+  
+  // For each date in local data
+  Object.entries(localData).forEach(([date, websiteData]) => {
+    if (!merged[date]) {
+      // Date doesn't exist in backend, just add it
+      merged[date] = { ...websiteData };
+    } else {
+      // Date exists, merge website data
+      merged[date] = { ...merged[date], ...websiteData };
+    }
+  });
+  
+  return merged;
+};
+
+// Helper: Merge two statistics objects (website -> value)
+const mergeStatsObjects = (
+  backendStats: Record<string, number>,
+  localStats: Record<string, number>
+): Record<string, number> => {
+  return { ...backendStats, ...localStats };
+};
+
 const SYNC_FIELD_MAPPINGS: SyncFieldMapping[] = [
   {
     localKey: "blockedWebsitesList",
@@ -408,13 +438,59 @@ export const syncUpdateSettings = async (settingsData: any): Promise<void> => {
 };
 
 // Push all local data to backend (used on day reset)
+// IMPORTANT: Fetches backend data first and merges with local to prevent data loss
 export const syncPushAll = async (): Promise<void> => {
   const authToken = await getAuthTokenAndCheckPro();
   if (!authToken) return;
 
   try {
+    // Fetch current backend data
+    const backendData = await fetchSyncData(authToken);
     const localData = await getLocalSyncData();
-    await pushSyncData(authToken, localData);
+
+    // If no backend data exists, just push local data
+    if (!backendData) {
+      await pushSyncData(authToken, localData);
+      return;
+    }
+
+    // Merge critical data that could have updates from multiple devices
+    const mergedData = { ...localData };
+
+    // Merge historical data
+    if (backendData.historicalRestrictedTimePerDay || localData.historicalRestrictedTimePerDay) {
+      const backendHistoricalRestricted = historicalToLocal(backendData.historicalRestrictedTimePerDay || []);
+      const localHistoricalRestricted = historicalToLocal(localData.historicalRestrictedTimePerDay || []);
+      const mergedHistoricalRestricted = mergeHistoricalData(backendHistoricalRestricted, localHistoricalRestricted);
+      mergedData.historicalRestrictedTimePerDay = historicalToBackend(mergedHistoricalRestricted);
+    }
+
+    if (backendData.historicalBlockedPerDay || localData.historicalBlockedPerDay) {
+      const backendHistoricalBlocked = historicalToLocal(backendData.historicalBlockedPerDay || []);
+      const localHistoricalBlocked = historicalToLocal(localData.historicalBlockedPerDay || []);
+      const mergedHistoricalBlocked = mergeHistoricalData(backendHistoricalBlocked, localHistoricalBlocked);
+      mergedData.historicalBlockedPerDay = historicalToBackend(mergedHistoricalBlocked);
+    }
+
+    // Merge daily statistics
+    if (backendData.dailyStatistics && localData.dailyStatistics) {
+      const backendBlockedPerDay = statsArrayToObject(backendData.dailyStatistics.blockedPerDay || []);
+      const localBlockedPerDay = statsArrayToObject(localData.dailyStatistics.blockedPerDay || []);
+      const mergedBlockedPerDay = mergeStatsObjects(backendBlockedPerDay, localBlockedPerDay);
+
+      const backendRestrictedTimePerDay = statsArrayToObject(backendData.dailyStatistics.restrictedTimePerDay || []);
+      const localRestrictedTimePerDay = statsArrayToObject(localData.dailyStatistics.restrictedTimePerDay || []);
+      const mergedRestrictedTimePerDay = mergeStatsObjects(backendRestrictedTimePerDay, localRestrictedTimePerDay);
+
+      mergedData.dailyStatistics = {
+        ...localData.dailyStatistics,
+        blockedPerDay: statsObjectToArray(mergedBlockedPerDay),
+        restrictedTimePerDay: statsObjectToArray(mergedRestrictedTimePerDay),
+      };
+    }
+
+    // Push merged data
+    await pushSyncData(authToken, mergedData);
   } catch (error) {
     console.error("Error pushing all data:", error);
   }
