@@ -40,12 +40,14 @@ jobs:
       - name: Create GitHub release
         id: create_release
         uses: actions/create-release@v1
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ steps.get_version.outputs.version }}
-          release_name: Time Snatch v${{ steps.get_version.outputs.version }}
-          body: Auto-generated release
-          draft: false
-          prerelease: false
+            tag_name: v${{ steps.get_version.outputs.version }}
+            release_name: Time Snatch v${{ steps.get_version.outputs.version }}
+            body: Auto-generated release
+            draft: false
+            prerelease: false
 
       - name: Upload Chrome zip
         uses: actions/upload-release-asset@v1
