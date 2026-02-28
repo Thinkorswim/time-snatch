@@ -19,17 +19,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Plus, Pencil, Info, ShieldBan, Component, Dot, Settings, ChartNoAxesColumn, Sparkles, CloudOff, CheckCircle2, RefreshCw } from 'lucide-react'
 import { loadUserFromStorage } from "@/lib/auth";
-import { 
-  getSyncStatus, 
-  subscribeSyncStatus, 
+import {
+  getSyncStatus,
+  subscribeSyncStatus,
   type SyncStatus,
-  syncDeleteWebsite, 
-  syncAll, 
-  syncAddGroupBudget, 
-  syncUpdateGroupBudget, 
-  syncDeleteGroupBudget, 
-  syncDeleteQuote, 
-  syncUpdateSettings 
+  syncDeleteWebsite,
+  syncAll,
+  syncAddGroupBudget,
+  syncUpdateGroupBudget,
+  syncDeleteGroupBudget,
+  syncDeleteQuote,
+  syncUpdateSettings
 } from "@/lib/sync";
 import { User } from "@/models/User.ts";
 import {
@@ -110,14 +110,14 @@ function Options() {
           setUser(new User());
         }
       }
-      
+
       // Refresh data when sync updates storage
       if (areaName === 'local') {
         if (changes.blockedWebsitesList) {
           setBlockedWebsitesList(changes.blockedWebsitesList.newValue || {});
         }
         if (changes.groupTimeBudgets) {
-          const budgets = (changes.groupTimeBudgets.newValue || []).map((b: any) => 
+          const budgets = (changes.groupTimeBudgets.newValue || []).map((b: any) =>
             GlobalTimeBudget.fromJSON(b)
           );
           setGroupTimeBudgets(budgets);
@@ -169,26 +169,20 @@ function Options() {
     }
   }, []);
 
-  const [ctaProperty, setCtaProperty] = useState<string>('discord');
   const [ctaDiscordText, setCtaDiscordText] = useState<string>('');
 
   const selectCallToAction = () => {
-    const randomProperty = Math.random() < 0.5 ? 'discord' : 'github';
-    setCtaProperty(randomProperty);
+    const ctaDiscordTexts: string[] = [
+      'Have a question? Join the',
+      'Need help? Join the',
+      'Have a suggestion? Join the',
+      'Want to chat? Join the',
+      'Like productivity? Join the',
+      'Have feedback? Join the',
+    ];
 
-    if (randomProperty === 'discord') {
-      const ctaDiscordTexts: string[] = [
-        'Have a question? Join the',
-        'Need help? Join the',
-        'Have a suggestion? Join the',
-        'Want to chat? Join the',
-        'Like productivity? Join the',
-        'Have feedback? Join the',
-      ];
-
-      const randomIndex = Math.floor(Math.random() * ctaDiscordTexts.length);
-      setCtaDiscordText(ctaDiscordTexts[randomIndex]);
-    }
+    const randomIndex = Math.floor(Math.random() * ctaDiscordTexts.length);
+    setCtaDiscordText(ctaDiscordTexts[randomIndex]);
   };
 
   const refreshQuotes = () => {
@@ -237,7 +231,7 @@ function Options() {
 
     browser.storage.local.set({ blockedWebsitesList: newBlockedWebsitesList }, () => {
       syncDeleteWebsite(websiteToDelete);
-      
+
       setBlockedWebsitesList(newBlockedWebsitesList);
       setWebsiteToDelete("");
     });
@@ -261,7 +255,7 @@ function Options() {
     browser.storage.local.set({ groupTimeBudgets: updatedBudgets.map(b => b.toJSON()) }, () => {
       // Sync to backend (fire-and-forget) - update the entire budget
       syncUpdateGroupBudget(selectedBudgetIndex, updatedBudgets[selectedBudgetIndex].toJSON());
-      
+
       setGroupTimeBudgets(updatedBudgets);
       setGlobalWebsiteToDelete("");
     });
@@ -312,17 +306,25 @@ function Options() {
     }
   }
 
-  const handleEditBlockedWebsite = (websiteName: string) => {
+  const openBlockedWebsiteEditDialog = (websiteName: string) => {
     setBlockedWebsite(blockedWebsitesList[websiteName]);
+    setIsWebsiteDialogOpen(true);
+  }
 
+  const handleAddBlockedWebsite = () => {
+    setBlockedWebsite(null);
+    setIsWebsiteDialogOpen(true);
+  }
+
+  const handleEditBlockedWebsite = (websiteName: string) => {
     if (requirePassword) {
       setPasswordAction({
-        function: setIsWebsiteDialogOpen,
-        params: [true]
+        function: openBlockedWebsiteEditDialog,
+        params: [websiteName]
       })
       setIsPasswordEntryDialogOpen(true);
     } else {
-      setIsWebsiteDialogOpen(true);
+      openBlockedWebsiteEditDialog(websiteName);
     }
   }
 
@@ -385,7 +387,7 @@ function Options() {
     browser.storage.local.set({ groupTimeBudgets: updatedBudgets.map(b => b.toJSON()) }, () => {
       // Sync to backend (fire-and-forget)
       syncAddGroupBudget(newBudget.toJSON());
-      
+
       setGroupTimeBudgets(updatedBudgets);
       setSelectedBudgetIndex(updatedBudgets.length - 1);
     });
@@ -399,7 +401,7 @@ function Options() {
     browser.storage.local.set({ groupTimeBudgets: updatedBudgets.map(b => b.toJSON()) }, () => {
       // Sync to backend (fire-and-forget)
       syncDeleteGroupBudget(index);
-      
+
       setGroupTimeBudgets(updatedBudgets);
       // Adjust selected index if necessary
       if (selectedBudgetIndex >= updatedBudgets.length) {
@@ -412,9 +414,9 @@ function Options() {
 
   const handleDeleteGroupBudget = (index: number) => {
     if (groupTimeBudgets.length <= 1) return;
-    
+
     setBudgetToDeleteIndex(index);
-    
+
     if (requirePassword) {
       setPasswordAction({
         function: setDeleteBudgetDialogOpen,
@@ -491,7 +493,7 @@ function Options() {
 
     const quoteIndex = quotes.findIndex(quote => quote.author === quoteToDelete.author && quote.quote === quoteToDelete.quote);
     const newQuotes = quotes?.filter(quote => !(quote.author === quoteToDelete.author && quote.quote === quoteToDelete.quote));
-    
+
     setQuotes(newQuotes);
     browser.storage.local.set({ quotes: newQuotes }, () => {
       // Sync to backend (fire-and-forget)
@@ -571,7 +573,7 @@ function Options() {
                   Blocked Websites
                 </div>
                 <div className='w-full text-right '>
-                  <Button className="" onClick={() => setIsWebsiteDialogOpen(true)}> <Plus className='h-5 w-5 mr-1' /> Add Website </Button>
+                  <Button className="" onClick={handleAddBlockedWebsite}> <Plus className='h-5 w-5 mr-1' /> Add Website </Button>
 
                   <Dialog open={isAddWebsiteDialogOpen} onOpenChange={handleDialogClose}>
                     <DialogContent className="bg-card" >
@@ -646,7 +648,7 @@ function Options() {
                   return (
                     <div key={budgetIndex} className={`mb-6 p-4 rounded-xl ${isSelected ? 'bg-muted/80 border-2 border-primary' : 'bg-muted/50'} cursor-pointer transition-all`}
                       onClick={() => setSelectedBudgetIndex(budgetIndex)}>
-                      
+
                       <div className='flex items-center justify-between mb-4'>
                         <div className='text-xl font-bold text-muted-foreground'>
                           Budget {budgetIndex + 1}
@@ -655,26 +657,26 @@ function Options() {
                           )}
                         </div>
                         <div className='flex items-center gap-2'>
-                          <Button size="sm" onClick={(e) => { 
-                            e.stopPropagation(); 
+                          <Button size="sm" onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedBudgetIndex(budgetIndex);
-                            handleGlobalTimeBudgetEdit(); 
-                          }}> 
-                            <Pencil className='h-4 w-4 mr-2' /> Edit 
+                            handleGlobalTimeBudgetEdit();
+                          }}>
+                            <Pencil className='h-4 w-4 mr-2' /> Edit
                           </Button>
-                          <Button size="sm" onClick={(e) => { 
-                            e.stopPropagation(); 
+                          <Button size="sm" onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedBudgetIndex(budgetIndex);
-                            setIsAddGlobalTimeBudgetWebsiteDialogOpen(true); 
-                          }}> 
-                            <Plus className='h-5 w-5 mr-1' /> Add Website 
+                            setIsAddGlobalTimeBudgetWebsiteDialogOpen(true);
+                          }}>
+                            <Plus className='h-5 w-5 mr-1' /> Add Website
                           </Button>
-                          <Button 
-                            size="sm" 
-                            variant="destructive" 
+                          <Button
+                            size="sm"
+                            variant="destructive"
                             disabled={groupTimeBudgets.length <= 1}
                             onClick={(e) => { e.stopPropagation(); handleDeleteGroupBudget(budgetIndex); }}
-                          > 
+                          >
                             Delete Budget
                           </Button>
                         </div>
@@ -778,9 +780,9 @@ function Options() {
                       {/* Websites Table for this budget */}
                       {budget.websites.size > 0 && (
                         <div className="mt-4 rounded-xl bg-background/50 px-5 py-4">
-                          <GlobalTimeBudgetTable 
-                            globalTimeBudgetWebsites={budget.websites} 
-                            deleteBlockedWebsite={(websiteName: string) => handleDeleteGlobalBlockedWebsite(websiteName)} 
+                          <GlobalTimeBudgetTable
+                            globalTimeBudgetWebsites={budget.websites}
+                            deleteBlockedWebsite={(websiteName: string) => handleDeleteGlobalBlockedWebsite(websiteName)}
                           />
                         </div>
                       )}
@@ -805,9 +807,9 @@ function Options() {
                       <div className='bg-card m-2 p-4 rounded-md'>
                         <DialogTitle>Setup Group Time Budget</DialogTitle>
                         <DialogDescription>
-                          <GlobalTimeBudgetForm 
-                            globalTimeBudgetProp={groupTimeBudgets[selectedBudgetIndex]} 
-                            callback={refreshGlobalTimeBudget} 
+                          <GlobalTimeBudgetForm
+                            globalTimeBudgetProp={groupTimeBudgets[selectedBudgetIndex]}
+                            callback={refreshGlobalTimeBudget}
                             budgetIndex={selectedBudgetIndex}
                           />
                         </DialogDescription>
@@ -822,8 +824,8 @@ function Options() {
                       <div className='bg-card m-2 p-4 rounded-md'>
                         <DialogTitle>Add Website to Budget {selectedBudgetIndex + 1}</DialogTitle>
                         <DialogDescription>
-                          <GlobalTimeBudgetWebsiteForm 
-                            callback={refreshGlobalTimeBudget} 
+                          <GlobalTimeBudgetWebsiteForm
+                            callback={refreshGlobalTimeBudget}
                             budgetIndex={selectedBudgetIndex}
                           />
                         </DialogDescription>
@@ -1043,34 +1045,12 @@ function Options() {
             <a href="https://groundedmomentum.com/" target="_blank" rel="noopener noreferrer" className="flex items-center text-muted-foreground font-semibold transition-colors">
               <img src="/images/gm_logo.svg" alt="Grounded Momentum Logo" className="w-6 h-6 mr-2" /> Grounded Momentum <Dot className='w-2 h-2 mx-1' /> 2026
             </a>
-            {ctaProperty === 'discord' ? (
-              <div className="flex items-center text-muted-foreground font-semibold">
-                {ctaDiscordText}
-                <div className='flex items-center'>
-                  <Button className="ml-3 rounded-lg" onClick={() => { window.open("https://discord.gg/SvTsqKwsgN", "_blank") }}>  <img height="20" width="20" className="mr-2 color-white" src="https://cdn.simpleicons.org/discord/5c4523" /> Discord </Button>
-                </div>
+            <div className="flex items-center text-muted-foreground font-semibold">
+              {ctaDiscordText}
+              <div className='flex items-center'>
+                <Button className="ml-3 rounded-lg" onClick={() => { window.open("https://discord.gg/SvTsqKwsgN", "_blank") }}>  <img height="20" width="20" className="mr-2 color-white" src="https://cdn.simpleicons.org/discord/5c4523" /> Discord </Button>
               </div>
-            ) : (
-              <div className="flex items-center text-muted-foreground font-semibold">
-                Want a Pomodoro Focus Timer? Try
-                <div className='flex items-center'>
-                  <Button
-                    className="ml-3 rounded-lg bg-background hover:bg-[#ff1d25]/10 text-[#ff1d25]"
-                    onClick={() => {
-                      let url = "https://chromewebstore.google.com/detail/cadence-pomodoro-focus-ti/mjpanfloecbdhkpilhgkglonabikjadf";
-                      if (import.meta.env.BROWSER === "firefox") {
-                        url = "https://addons.mozilla.org/en-US/firefox/addon/cadence-pomodoro-focus-timers/";
-                      } else if (import.meta.env.BROWSER === "edge") {
-                        url = "https://microsoftedge.microsoft.com/addons/detail/cadence-pomodoro-focus-/lkgpghlmfjbmfjckgebegoclmklkhdml";
-                      }
-                      window.open(url, "_blank");
-                    }}
-                  >
-                    <img src="/images/logo-cadence.svg" alt="Logo" className="w-5 h-5 mr-2" /> Cadence
-                  </Button>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         </footer>
       </div >
