@@ -47,6 +47,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { RestrictedPerDayChart } from './RestrictedPerDayChart';
 import { BlockedPerDayChart } from './BlockedPerDayChart';
+import { StatsOverview } from './StatsOverview';
 import { QuotesTable } from '@/components/custom/QuotesTable';
 import { QuotesForm } from '@/components/custom/QuotesForm';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -884,6 +885,10 @@ function Options() {
                 <div className='text-3xl font-bold w-full text-muted-foreground'>
                   Statistics
                 </div>
+                <StatsOverview
+                  historicalRestrictedTimePerDay={historicalRestrictedTimePerDay}
+                  historicalBlockedPerDay={historicalBlockedPerDay}
+                />
                 <div className='mt-8 bg-muted/50 p-5 rounded-xl'>
                   <div className='mb-5'>
                     <RestrictedPerDayChart historicalRestrictedTimePerDay={historicalRestrictedTimePerDay} />
