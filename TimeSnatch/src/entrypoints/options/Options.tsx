@@ -146,12 +146,12 @@ function Options() {
       setSyncStatus(status);
     });
 
-    if (user.isPro && user.authToken) {
+    if (user.extensionsPlus && user.authToken) {
       syncAll(user.authToken);
     }
 
     return unsubscribe;
-  }, [user.isPro, user.authToken]);
+  }, [user.extensionsPlus, user.authToken]);
 
 
   // on load set the active tab to the one that was last open
@@ -239,7 +239,7 @@ function Options() {
   }
 
   const handleForceSync = async () => {
-    if (!user.isPro || !user.authToken) {
+    if (!user.extensionsPlus || !user.authToken) {
       return;
     }
 
@@ -523,7 +523,7 @@ function Options() {
                 <TabsTrigger className='data-[state=active]:shadow-none ml-1 bg-gradient-to-r from-chart-1 to-chart-3 text-white data-[state=active]:text-white transition-all duration-100 hover:scale-105' value="gmplus" ><Sparkles className='w-5 h-5 mr-1' />  GM Plus</TabsTrigger>
               </TabsList>
               {/* Sync status indicator - only show for Pro users */}
-              {user.isPro && (
+              {user.extensionsPlus && (
                 <div className="flex items-center space-x-3 ml-4">
                   <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                     {syncStatus === "idle" && (

@@ -23,7 +23,7 @@ function Popup() {
   const [groupTimeBudgets, setGroupTimeBudgets] = useState<GlobalTimeBudget[]>([]);
   const [isHighlighted, setIsHighlighted] = useState(false);
   const [activeTab, setActiveTab] = useState('blockedWebsites');
-  const [isProUser, setIsProUser] = useState(false);
+  const [extensionsPlusUser, setIsProUser] = useState(false);
 
   const openStatisticsPage = () => {
     const url = browser.runtime.getURL('/options.html?section=statistics');
@@ -70,7 +70,7 @@ function Popup() {
     // Retrieve user and website data from storage
     browser.storage.local.get(["user", "blockedWebsitesList", "groupTimeBudgets"], async (data) => {
       // Set Pro user status
-      if (data.user?.isPro) {
+      if (data.user?.extensionsPlus) {
         setIsProUser(true);
       }
       
@@ -87,7 +87,7 @@ function Popup() {
       }
       
       // Sync website data in background if user is Pro, then update UI
-      if (data.user?.isPro && data.user?.authToken) {
+      if (data.user?.extensionsPlus && data.user?.authToken) {
         syncWebsites(data.user.authToken).then(async () => {
           const updatedData = await browser.storage.local.get(["blockedWebsitesList", "groupTimeBudgets"]);
           const updatedBudgets = updatedData.groupTimeBudgets && Array.isArray(updatedData.groupTimeBudgets)
@@ -110,7 +110,7 @@ function Popup() {
             Time Snatch
           </div>
         </div>
-        {isProUser ? (
+        {extensionsPlusUser ? (
           <span
             onClick={() => {
               const url = browser.runtime.getURL('/options.html?section=gmplus');

@@ -1,16 +1,19 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   Sparkles,
   Check,
   Crown,
   RefreshCw,
   Mail,
-  CreditCard,
-  XCircle,
-  Calendar,
-  Database,
-  Heart,
+  ExternalLink,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -28,21 +31,41 @@ import {
   triggerSyncForProUser,
 } from "@/lib/auth";
 import {
-  formatBillingDate,
   paymentPageRedirect,
-  getPricing,
-  getPaymentManagementLinks,
-  detectCurrency,
-  type BillingPeriod,
-  type PaymentManagementResponse,
-  type Currency,
 } from "@/lib/payments";
 import { hasApiPermission, requestApiPermission } from "@/lib/permissions";
 
+type Browser = "chrome" | "firefox" | "edge";
+
+const detectBrowser = (): Browser => {
+  const ua = navigator.userAgent;
+  if (ua.includes("Edg/")) return "edge";
+  if (ua.includes("Firefox")) return "firefox";
+  return "chrome";
+};
+
+const STORE_URLS = {
+  cadence: {
+    chrome:
+      "https://chromewebstore.google.com/detail/cadence-pomodoro-focus-ti/mjpanfloecbdhkpilhgkglonabikjadf",
+    firefox:
+      "https://addons.mozilla.org/en-US/firefox/addon/cadence-pomodoro-focus-timers/",
+    edge: "https://microsoftedge.microsoft.com/addons/detail/cadence-pomodoro-focus-/lkgpghlmfjbmfjckgebegoclmklkhdml",
+  },
+  gramControl: {
+    chrome:
+      "https://chromewebstore.google.com/detail/gramcontrol-%E2%80%93-block-insta/opfbphbmpekblencogampchiepebfmnm",
+    firefox:
+      "https://addons.mozilla.org/en-US/firefox/addon/block-instagram-distractions/",
+    edge: "https://microsoftedge.microsoft.com/addons/detail/gramcontrol-%E2%80%93-block-insta/mgmeddnpmecnhicccmpedjpcpgokfpbc",
+  },
+} as const;
+
 export function GMPlus() {
   const [isLogin, setIsLogin] = useState<boolean>(true);
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("yearly");
-  const [currency, setCurrency] = useState<Currency>(detectCurrency());
+  const browser = detectBrowser();
+  const cdUrl = STORE_URLS.cadence[browser];
+  const gcUrl = STORE_URLS.gramControl[browser];
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
@@ -51,10 +74,6 @@ export function GMPlus() {
   const [error, setError] = useState<string>("");
   const [isLoadingUserData, setIsLoadingUserData] = useState<boolean>(false);
   const [isPaymentLoading, setIsPaymentLoading] = useState<boolean>(false);
-  const [paymentManagementLinks, setPaymentManagementLinks] =
-    useState<PaymentManagementResponse | null>(null);
-  const [isLoadingManagementLinks, setIsLoadingManagementLinks] =
-    useState<boolean>(false);
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [isForgotPassword, setIsForgotPassword] = useState<boolean>(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState<string>("");
@@ -64,9 +83,7 @@ export function GMPlus() {
     useState<string>("");
   const [hasBackendPermission, setHasBackendPermission] =
     useState<boolean>(false);
-  const [isCheckingPermission, setIsCheckingPermission] =
-    useState<boolean>(true);
-  const [isRequestingPermission, setIsRequestingPermission] =
+  const [showPermissionDialog, setShowPermissionDialog] =
     useState<boolean>(false);
 
   const handlePayment = async () => {
@@ -74,7 +91,7 @@ export function GMPlus() {
     setError("");
 
     try {
-      await paymentPageRedirect(user.authToken, billingPeriod);
+      await paymentPageRedirect(user.authToken);
     } catch (error) {
       setError("Failed to redirect to payment page");
     }
@@ -102,16 +119,10 @@ export function GMPlus() {
           freshUserData.data.email,
           freshUserData.data.emailVerified || false,
           user.authToken,
-          freshUserData.data.isPro || false,
-          freshUserData.data.nextBillingDate,
-          freshUserData.data.billingCycle
+          freshUserData.data.extensionsPlus || false
         );
         setUser(updatedUser);
         saveUserToStorage(updatedUser);
-
-        if (updatedUser.isPro) {
-          loadPaymentManagementLinks(user.authToken);
-        }
       } else {
         handleSignOut();
       }
@@ -140,42 +151,17 @@ export function GMPlus() {
     setIsLoading(false);
   };
 
-  const loadPaymentManagementLinks = async (authToken: string) => {
-    setIsLoadingManagementLinks(true);
-    try {
-      const links = await getPaymentManagementLinks(authToken);
-      setPaymentManagementLinks(links);
-    } catch (error) {
-      console.log("Failed to load payment management links");
-    }
-    setIsLoadingManagementLinks(false);
-  };
-
-  const handleUpdatePaymentMethod = () => {
-    if (
-      paymentManagementLinks &&
-      paymentManagementLinks.portal_data.urls.subscriptions.length > 0
-    ) {
-      const updateUrl =
-        paymentManagementLinks.portal_data.urls.subscriptions[0]
-          .update_subscription_payment_method;
-      window.open(updateUrl, "_blank");
-    }
-  };
-
-  const handleCancelSubscription = () => {
-    if (
-      paymentManagementLinks &&
-      paymentManagementLinks.portal_data.urls.subscriptions.length > 0
-    ) {
-      const cancelUrl =
-        paymentManagementLinks.portal_data.urls.subscriptions[0]
-          .cancel_subscription;
-      window.open(cancelUrl, "_blank");
-    }
+  const ensurePermission = async (): Promise<boolean> => {
+    if (hasBackendPermission) return true;
+    setShowPermissionDialog(true);
+    const granted = await requestApiPermission();
+    setShowPermissionDialog(false);
+    if (granted) setHasBackendPermission(true);
+    return granted;
   };
 
   const handleAuthSubmit = async () => {
+    if (!await ensurePermission()) return;
     setError("");
     setIsLoading(true);
 
@@ -208,23 +194,21 @@ export function GMPlus() {
       email,
       data.user?.emailVerified || false,
       data.user?.authToken || "",
-      data.user?.isPro || false,
-      data.user?.nextBillingDate,
-      data.user?.billingCycle
+      data.user?.extensionsPlus || false
     );
 
     setUser(newUser);
     saveUserToStorage(newUser);
 
-    // Trigger sync for Pro users after login (non-blocking)
     if (isLogin) {
-      triggerSyncForProUser(newUser.authToken, newUser.isPro);
+      triggerSyncForProUser(newUser.authToken, newUser.extensionsPlus);
     }
 
     setIsLoading(false);
   };
 
   const handleGoogleSignIn = async () => {
+    if (!await ensurePermission()) return;
     setError("");
     setIsLoading(true);
 
@@ -239,21 +223,13 @@ export function GMPlus() {
         data.user.email,
         data.user.emailVerified || false,
         data.user.authToken || "",
-        data.user.isPro || false,
-        data.user.nextBillingDate,
-        data.user.billingCycle
+        data.user.extensionsPlus || false
       );
 
       setUser(newUser);
       saveUserToStorage(newUser);
 
-      // Trigger sync for Pro users after login (non-blocking)
-      triggerSyncForProUser(newUser.authToken, newUser.isPro);
-
-      // Load payment management links for Pro users
-      if (newUser.isPro) {
-        loadPaymentManagementLinks(newUser.authToken);
-      }
+      triggerSyncForProUser(newUser.authToken, newUser.extensionsPlus);
     } catch (err: any) {
       setError(err.message || "Google sign-in failed");
     }
@@ -293,28 +269,8 @@ export function GMPlus() {
   };
 
   const checkBackendPermission = async () => {
-    setIsCheckingPermission(true);
     const hasPermission = await hasApiPermission();
     setHasBackendPermission(hasPermission);
-    setIsCheckingPermission(false);
-  };
-
-  const handleRequestPermission = async () => {
-    setIsRequestingPermission(true);
-
-    const granted = await requestApiPermission();
-
-    setError("");
-
-    if (granted) {
-      setHasBackendPermission(true);
-    } else {
-      setError(
-        "Permission was denied. Backend functionality will not be available."
-      );
-    }
-
-    setIsRequestingPermission(false);
   };
 
   useEffect(() => {
@@ -328,22 +284,8 @@ export function GMPlus() {
       setIsInitialLoading(false);
     };
 
-    // Initialize user data and currency
     loadUserData();
-    setCurrency(detectCurrency());
   }, []);
-
-  useEffect(() => {
-    if (user.isPro) {
-      loadPaymentManagementLinks(user.authToken);
-    }
-  }, [user.isPro]);
-
-  useEffect(() => {
-    if (user.billingCycle) {
-      setBillingPeriod(user.billingCycle as BillingPeriod);
-    }
-  }, [user.billingCycle]);
 
   useEffect(() => {
     checkBackendPermission();
@@ -357,238 +299,228 @@ export function GMPlus() {
         </div>
       </div>
 
-      {!hasBackendPermission && !isCheckingPermission && (
-        <div className="mb-4 p-4 border border-primary-200 rounded-lg bg-yellow-50">
-          <div className="flex justify-between items-center space-x-3">
-            <div className="flex-1">
-              <h4 className="text-sm font-medium text-yellow-800 mb-1">
-                Backend Permission Required
-              </h4>
-              <p className="text-sm text-yellow-700 mb-3">
-                To use Plus features like account management and cross-device
-                sync, we need permission to connect to our backend server
-                (https://api.groundedmomentum.com/).
-              </p>
-            </div>
-            <Button
-              onClick={handleRequestPermission}
-              disabled={isRequestingPermission}
-              size="sm"
-              className=""
-            >
-              {isRequestingPermission ? (
-                <>
-                  <RefreshCw className="w-3 h-3 mr-2 animate-spin" />
-                  Requesting...
-                </>
-              ) : (
-                <>
-                  <Check className="w-4 h-4 mr-2" />
-                  Grant Permission
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
+      <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>
+        <DialogContent className="sm:max-w-md p-8">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-xl mb-2">Permission Required</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
+              To sign in or create an account, we need permission to connect to
+              our servers. This is required for authentication and sync features.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
 
       <div className="border border-border rounded-xl bg-background ">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Section - Benefits and Pricing */}
+          {/* Left Section */}
           <div className="space-y-6 p-8">
-            {/* Benefits Section */}
+            {user.extensionsPlus ? (
+              /* Active Plus view */
+              <>
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-green-500 rounded-lg">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold">GM Extensions Plus Active</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Thank you for your support!
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Your Extensions
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5">
+                      <div className="flex items-center space-x-3">
+                        <img src="/icon/128.png" className="w-8 h-8 rounded-md" />
+                        <div>
+                          <p className="text-sm font-medium">Time Snatch</p>
+                          <p className="text-xs text-muted-foreground">
+                            Block distracting websites
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs text-muted-foreground font-medium bg-primary/10 px-2 py-0.5 rounded-full">
+                        Current
+                      </span>
+                    </div>
+
+                    <a
+                      href={cdUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 hover:border-primary/30 transition-colors group no-underline"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <img src="/icon/cd-128.png" className="w-8 h-8 rounded-md" />
+                        <div>
+                          <p className="text-sm font-medium">Cadence</p>
+                          <p className="text-xs text-muted-foreground">
+                            Pomodoro focus timers
+                          </p>
+                        </div>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-muted-foreground transition-colors" />
+                    </a>
+
+                    <a
+                      href={gcUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 hover:border-primary/30 transition-colors group no-underline"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <img src="/icon/gc-128.png" className="w-8 h-8 rounded-md" />
+                        <div>
+                          <p className="text-sm font-medium">GramControl</p>
+                          <p className="text-xs text-muted-foreground">
+                            Block Instagram distractions
+                          </p>
+                        </div>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-muted-foreground transition-colors" />
+                    </a>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* Sales view */
+              <>
+                {/* Header */}
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-primary rounded-lg">
+                    <Sparkles className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold">Unlock GM Extensions Plus</h3>
+                    <p className="text-sm text-muted-foreground">
+                      One subscription, all of our extensions
+                    </p>
+                  </div>
+                </div>
+
+                {/* Benefits with checkmarks */}
+                <div className="space-y-3">
+                  {[
+                    "Cloud data backup",
+                    "Cross-device & cross-browser sync",
+                    "Access to all current and future plus features",
+                    "Support open-source development",
+                  ].map((text) => (
+                    <div key={text} className="flex items-center space-x-3">
+                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Check className="w-3 h-3 text-muted-foreground" />
+                      </div>
+                      <span className="text-sm text-muted-foreground">{text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Extensions Included */}
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    3 Extensions Included
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5">
+                      <div className="flex items-center space-x-3">
+                        <img src="/icon/128.png" className="w-8 h-8 rounded" />
+                        <div>
+                          <p className="text-sm font-medium">Time Snatch</p>
+                          <p className="text-xs text-muted-foreground">
+                            Block distracting websites
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs text-muted-foreground font-medium bg-primary/10 px-2 py-0.5 rounded-full">
+                        Current
+                      </span>
+                    </div>
+
+                    <a
+                      href={cdUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 hover:border-primary/30 transition-colors group no-underline"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <img src="/icon/cd-128.png" className="w-8 h-8 rounded" />
+                        <div>
+                          <p className="text-sm font-medium">Cadence</p>
+                          <p className="text-xs text-muted-foreground">
+                            Pomodoro focus timers
+                          </p>
+                        </div>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-muted-foreground transition-colors" />
+                    </a>
+
+                    <a
+                      href={gcUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 hover:border-primary/30 transition-colors group no-underline"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <img src="/icon/gc-128.png" className="w-8 h-8 rounded" />
+                        <div>
+                          <p className="text-sm font-medium">GramControl</p>
+                          <p className="text-xs text-muted-foreground">
+                            Block Instagram distractions
+                          </p>
+                        </div>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-muted-foreground transition-colors" />
+                    </a>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Pricing Section - only shown when not Plus */}
+            {!user.extensionsPlus && (
             <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-primary rounded-lg">
-                  <Sparkles className="w-6 h-6 text-muted-foreground" />
-                </div>
-                <h3 className="text-xl font-semibold">
-                  Unlock Grounded Momentum Plus
-                </h3>
-              </div>
-
-              <div className="space-y-4 mt-5">
-                <div className="flex items-center space-x-3">
-                  <Database className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-muted-foreground text-sm">
-                    Store your data persistently
-                  </span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <RefreshCw className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-muted-foreground text-sm">
-                    Cross-device + cross-browser syncing functionality
-                  </span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Crown className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-muted-foreground text-sm">
-                    Plus features for all Grounded Momentum products
-                  </span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Heart className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-muted-foreground text-sm">
-                    Support further open-source development 
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Pricing Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-lg font-medium">Choose your plan</h4>
-                <div className="text-sm text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                  {currency}
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4 mb-4">
-                <Button
-                  variant={billingPeriod === "monthly" ? "default" : "outline"}
-                  onClick={() => setBillingPeriod("monthly")}
-                  className={`flex-1 border-0 shadow-none ${
-                    billingPeriod === "monthly"
-                      ? "bg-primary"
-                      : "bg-primary/20 hover:bg-primary/40"
-                  }`}
-                >
-                  Monthly
-                </Button>
-                <Button
-                  variant={billingPeriod === "yearly" ? "default" : "outline"}
-                  onClick={() => setBillingPeriod("yearly")}
-                  className={`flex-1 relative border-0 shadow-none ${
-                    billingPeriod === "yearly"
-                      ? "bg-primary"
-                      : "bg-primary/20 hover:bg-primary/40"
-                  }`}
-                >
-                  Yearly
-                  <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-                    Save 33%
-                  </span>
-                </Button>
-              </div>
+              <h4 className="text-lg font-medium">Lifetime access</h4>
 
               <div className="p-6 border border-border rounded-lg bg-muted/30">
                 <div className="text-center">
                   <div className="text-3xl font-bold">
-                    {getPricing(billingPeriod, currency).currencySymbol}
-                    {getPricing(billingPeriod, currency).price}
-                    <span className="text-lg font-normal text-muted-foreground">
-                      /{getPricing(billingPeriod, currency).period}
+                    $19.99
+                    <span className="text-lg font-normal text-muted-foreground ml-1">
+                      one-time
                     </span>
                   </div>
-                  {billingPeriod === "yearly" && (
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {getPricing(billingPeriod, currency).description}
-                    </div>
-                  )}
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Pay once, use forever
+                  </p>
 
                   {/* Only show upgrade button if logged in */}
                   {user.email ? (
                     user.emailVerified ? (
                       <div>
-                        {user.isPro ? (
-                          <div className="mt-4 space-y-3">
-                            <div className="p-3 bg-green-50 rounded-lg">
-                              <div className="flex items-center justify-center text-green-700">
-                                <Sparkles className="w-4 h-4 mr-2" />
-                                <span className="font-medium">
-                                  Active Plus Membership
-                                </span>
-                              </div>
-                              <p className="text-xs text-green-600 text-center mt-1">
-                                Thank you for your support!
-                              </p>
-                            </div>
-
-                            {/* Billing Information */}
-                            {(user.nextBillingDate || user.billingCycle) && (
-                              <div className="p-3 bg-blue-50 rounded-lg">
-                                <div className="flex items-center justify-center text-blue-700 mb-2">
-                                  <Calendar className="w-4 h-4 mr-2" />
-                                  <span className="font-medium">
-                                    Billing Information
-                                  </span>
-                                </div>
-                                <div className="space-y-1 text-xs text-blue-600 text-center">
-                                  {user.billingCycle && (
-                                    <p>
-                                      Plan:{" "}
-                                      <span className="font-medium capitalize">
-                                        {user.billingCycle}
-                                      </span>
-                                    </p>
-                                  )}
-                                  {user.nextBillingDate && (
-                                    <p>
-                                      Next billing:{" "}
-                                      <span className="font-medium">
-                                        {formatBillingDate(
-                                          user.nextBillingDate
-                                        )}
-                                      </span>
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {paymentManagementLinks && (
-                              <div className="grid grid-cols-2 gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="hover:bg-primary/50"
-                                  onClick={handleUpdatePaymentMethod}
-                                  disabled={isLoadingManagementLinks}
-                                >
-                                  <CreditCard className="w-4 h-4 mr-2" />
-                                  Update Payment
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="hover:bg-primary/50"
-                                  onClick={handleCancelSubscription}
-                                  disabled={isLoadingManagementLinks}
-                                >
-                                  <XCircle className="w-4 h-4 mr-2" />
-                                  Cancel
-                                </Button>
-                              </div>
-                            )}
-
-                            {isLoadingManagementLinks && (
-                              <div className="flex items-center justify-center text-sm text-muted-foreground">
-                                <RefreshCw className="w-3 h-3 mr-2 animate-spin" />
-                                Loading management options...
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <Button
-                            className="w-full mt-4"
-                            size="lg"
-                            onClick={handlePayment}
-                            disabled={isPaymentLoading}
-                          >
-                            {isPaymentLoading ? (
-                              <>
-                                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                                Opening checkout...
-                              </>
-                            ) : (
-                              <>
-                                <Crown className="w-4 h-4 mr-2" />
-                                Upgrade to Plus
-                              </>
-                            )}
-                          </Button>
-                        )}
+                        <Button
+                          className="w-full mt-4"
+                          size="lg"
+                          onClick={handlePayment}
+                          disabled={isPaymentLoading}
+                        >
+                          {isPaymentLoading ? (
+                            <>
+                              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                              Opening checkout...
+                            </>
+                          ) : (
+                            <>
+                              <Crown className="w-4 h-4 mr-2" />
+                              Get Lifetime Access
+                            </>
+                          )}
+                        </Button>
                         {error && !isLoading && (
                           <div className="mt-3 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
                             {error}
@@ -619,19 +551,15 @@ export function GMPlus() {
                         </p>
                       </div>
                     </div>
-                  ) : (
-                    <div className="mt-4 p-3 bg-muted/50 border border-dashed border-muted-foreground/30 rounded-lg">
-                      <p className="text-sm text-muted-foreground text-center">
-                        Sign in to upgrade to Plus
-                      </p>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
+            )}
+
           </div>
 
-          {/* Right Section - Login/Register Forms with better separation */}
+          {/* Right Section - Login/Register Forms */}
           <div className="h-full flex items-center justify-center bg-muted/50 rounded-xl ">
             <div className="p-6 px-16 space-y-4 w-full max-w-md">
               {user.email ? (
@@ -646,7 +574,7 @@ export function GMPlus() {
                     </div>
                   ) : (
                     <>
-                      <div className={`p-4  rounded-lg bg-primary/50 `}>
+                      <div className={`p-4  rounded-lg bg-background `}>
                         <div className="flex items-center justify-center">
                           {!user.emailVerified && (
                             <Mail className="w-8 h-8 text-muted-foreground" />
@@ -668,9 +596,8 @@ export function GMPlus() {
                               : "text-muted-foreground"
                           }`}
                         >
-                          {/* {user.email} */}
-                          {user.isPro && (
-                            <span className="mt-2 ml-2 px-1 w-16 text-center py-1 flex items-center justify-center text-xs bg-gradient-to-r from-chart-1 to-chart-3 text-white rounded-full font-semibold">
+                          {user.extensionsPlus && (
+                            <span className="mt-2 ml-2 px-1 w-16 text-center py-1 flex items-center justify-center text-xs bg-gradient-to-r from-chart-1 to-chart-2 text-white rounded-full font-semibold">
                               <Sparkles className="inline-block w-3 h-3 mr-1" />
                               Plus
                             </span>
@@ -686,7 +613,7 @@ export function GMPlus() {
                       {!user.emailVerified && (
                         <Button
                           variant="outline"
-                          className="w-full hover:bg-primary/50"
+                          className="w-full hover:bg-primary/20"
                           onClick={handleResendVerification}
                         >
                           <RefreshCw className="w-4 h-4 mr-2" />
@@ -697,7 +624,7 @@ export function GMPlus() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full hover:bg-primary/50"
+                        className="w-full hover:bg-primary/20"
                         onClick={refreshUserData}
                         disabled={isLoadingUserData}
                       >
@@ -713,7 +640,7 @@ export function GMPlus() {
 
                   <Button
                     variant="outline"
-                    className="w-full hover:bg-primary/50"
+                    className="w-full hover:bg-primary/20"
                     onClick={handleSignOut}
                   >
                     Sign Out
@@ -749,9 +676,7 @@ export function GMPlus() {
                               onChange={(e) =>
                                 setForgotPasswordEmail(e.target.value)
                               }
-                              disabled={
-                                isForgotPasswordLoading || !hasBackendPermission
-                              }
+                              disabled={isForgotPasswordLoading}
                             />
                           </div>
                         )}
@@ -773,9 +698,7 @@ export function GMPlus() {
                             className="w-full"
                             size="lg"
                             onClick={handleForgotPassword}
-                            disabled={
-                              isForgotPasswordLoading || !hasBackendPermission
-                            }
+                            disabled={isForgotPasswordLoading}
                           >
                             {isForgotPasswordLoading ? (
                               <>
@@ -805,9 +728,7 @@ export function GMPlus() {
                     <>
                       <div className="text-center mb-4">
                         <p className="text-sm text-muted-foreground">
-                          {!hasBackendPermission
-                            ? "Grant backend permission above to sign in or create an account"
-                            : "Sign in or create an account to continue"}
+                          Sign in or create an account to continue
                         </p>
                       </div>
 
@@ -819,8 +740,7 @@ export function GMPlus() {
                             setIsLogin(true);
                             setError("");
                           }}
-                          className="flex-1"
-                          disabled={!hasBackendPermission}
+                          className={`flex-1 ${isLogin ? "" : "hover:bg-primary/20"}`}
                         >
                           Login
                         </Button>
@@ -831,8 +751,7 @@ export function GMPlus() {
                             setIsLogin(false);
                             setError("");
                           }}
-                          className="flex-1"
-                          disabled={!hasBackendPermission}
+                          className={`flex-1 ${!isLogin ? "" : "hover:bg-primary/20"}`}
                         >
                           Register
                         </Button>
@@ -847,7 +766,7 @@ export function GMPlus() {
                             placeholder="Enter your email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            disabled={isLoading || !hasBackendPermission}
+                            disabled={isLoading}
                           />
                         </div>
 
@@ -859,7 +778,7 @@ export function GMPlus() {
                             placeholder="Enter your password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            disabled={isLoading || !hasBackendPermission}
+                            disabled={isLoading}
                           />
                         </div>
 
@@ -876,7 +795,7 @@ export function GMPlus() {
                               onChange={(e) =>
                                 setConfirmPassword(e.target.value)
                               }
-                              disabled={isLoading || !hasBackendPermission}
+                              disabled={isLoading}
                             />
                           </div>
                         )}
@@ -891,7 +810,7 @@ export function GMPlus() {
                           className="w-full"
                           size="lg"
                           onClick={handleAuthSubmit}
-                          disabled={isLoading || !hasBackendPermission}
+                          disabled={isLoading}
                         >
                           {isLoading ? (
                             <>
@@ -917,10 +836,10 @@ export function GMPlus() {
 
                         <Button
                           variant="outline"
-                          className="w-full hover:bg-primary/50"
+                          className="w-full hover:bg-primary/20"
                           size="lg"
                           onClick={handleGoogleSignIn}
-                          disabled={isLoading || !hasBackendPermission}
+                          disabled={isLoading}
                         >
                           <svg
                             className="w-5 h-5 mr-2"

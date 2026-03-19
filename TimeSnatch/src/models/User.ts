@@ -3,26 +3,20 @@ export class User {
     public email: string = "",
     public emailVerified: boolean = false,
     public authToken: string = "",
-    public isPro: boolean = false,
-    public nextBillingDate?: string,
-    public billingCycle?: "monthly" | "yearly"
+    public extensionsPlus: boolean = false,
   ) {}
 
   toJSON(): {
     email: string;
     emailVerified: boolean;
     authToken: string;
-    isPro: boolean;
-    nextBillingDate?: string;
-    billingCycle?: "monthly" | "yearly";
+    extensionsPlus: boolean;
   } {
     return {
       email: this.email,
       emailVerified: this.emailVerified,
       authToken: this.authToken,
-      isPro: this.isPro,
-      nextBillingDate: this.nextBillingDate,
-      billingCycle: this.billingCycle,
+      extensionsPlus: this.extensionsPlus,
     };
   }
 
@@ -30,17 +24,13 @@ export class User {
     email: string;
     emailVerified: boolean;
     authToken: string;
-    isPro?: boolean; // Make optional for backward compatibility
-    nextBillingDate?: string;
-    billingCycle?: "monthly" | "yearly";
+    extensionsPlus?: boolean;
   }): User {
     return new User(
       json.email,
       json.emailVerified,
       json.authToken,
-      json.isPro || false, // Default to false if not present
-      json.nextBillingDate,
-      json.billingCycle
+      json.extensionsPlus || false,
     );
   }
 }

@@ -247,7 +247,7 @@ const applyBackendData = async (backendData: Record<string, any>): Promise<void>
 const getAuthTokenAndCheckPro = async (): Promise<string | null> => {
   try {
     const data = await browser.storage.local.get(["user"]);
-    if (data.user?.isPro && data.user?.authToken) {
+    if (data.user?.extensionsPlus && data.user?.authToken) {
       return data.user.authToken;
     }
     return null;

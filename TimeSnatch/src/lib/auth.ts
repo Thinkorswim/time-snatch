@@ -8,9 +8,7 @@ export interface AuthResponse {
     email: string;
     emailVerified: boolean;
     authToken: string;
-    isPro?: boolean;
-    nextBillingDate?: string;
-    billingCycle?: "monthly" | "yearly";
+    extensionsPlus?: boolean;
   };
   message?: string;
 }
@@ -20,9 +18,7 @@ export interface UserData {
     email: string;
     emailVerified: boolean;
     authToken: string;
-    isPro: boolean;
-    nextBillingDate?: string;
-    billingCycle?: "monthly" | "yearly";
+    extensionsPlus: boolean;
   };
 }
 
@@ -70,8 +66,8 @@ export const signInRequest = (email: string, password: string): Promise<AuthResp
   apiRequest("/api/auth/sign-in/email", { body: { email, password } }, "Login failed");
 
 // Trigger sync for Pro users after login (non-blocking)
-export const triggerSyncForProUser = (authToken: string, isPro: boolean): void => {
-  if (isPro && authToken) {
+export const triggerSyncForProUser = (authToken: string, hasExtensionsPlus: boolean): void => {
+  if (hasExtensionsPlus && authToken) {
     // Run sync in background, don't await
     syncAll(authToken).catch((err) => {
       console.error("Background sync failed:", err);
@@ -125,9 +121,7 @@ export const loadUserFromStorage = async (): Promise<User | null> => {
         email: freshUserData.data.email,
         emailVerified: freshUserData.data.emailVerified || false,
         authToken: savedUser.authToken,
-        isPro: freshUserData.data.isPro || false,
-        nextBillingDate: freshUserData.data.nextBillingDate,
-        billingCycle: freshUserData.data.billingCycle,
+        extensionsPlus: freshUserData.data.extensionsPlus || false,
       };
       const updatedUser = User.fromJSON(updatedUserData);
       saveUserToStorage(updatedUser);
