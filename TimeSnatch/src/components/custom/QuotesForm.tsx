@@ -3,10 +3,10 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Button } from '@/components/ui/button';
-import { syncAddQuote } from '@/lib/sync';
+import { syncQuotesBg, type QuoteRecord } from '@/lib/sync';
 
 interface QuotesFormProps {
-    callback?: () => void; // Generic optional callback
+    callback?: () => void;
 }
 
 export const QuotesForm: React.FC<QuotesFormProps> = ({ callback }) => {
@@ -20,51 +20,50 @@ export const QuotesForm: React.FC<QuotesFormProps> = ({ callback }) => {
     const authorInputRef = useRef<HTMLInputElement | null>(null);
     const quoteInputRef = useRef<HTMLTextAreaElement | null>(null);
 
-    // Add the blocked website to storage
-    const addQuote = () => {
+    const addQuote = async () => {
+        const trimmedAuthor = authorValue.trim();
+        const trimmedQuote = quoteValue.trim();
 
-        if (authorValue.trim() !== "" && quoteValue.trim() !== "") {
-
-            browser.storage.local.get(['quotes'], (data) => {
-                if (data.quotes) {
-                    const quotes = data.quotes as Array<{ author: string; quote: string }>;
-                    const newQuote = { author: authorValue, quote: quoteValue };
-
-                    // Check if the quote already exists
-                    const quoteExists = quotes.some((quote) => {
-                        return quote.author === newQuote.author && quote.quote === newQuote.quote;
-                    });
-
-                    if (quoteExists) {
-                        setIsRepeatedQuote(true);
-                        return;
-                    } else {
-                        quotes.push(newQuote);
-                        browser.storage.local.set({ quotes: quotes }, () => {
-                            // Sync to backend (fire-and-forget)
-                            syncAddQuote(newQuote);
-                            
-                            if (callback) {
-                                callback();
-                            }
-                        })
-                    }
-
-                }
-            });
-        } else {
-            if (authorValue.trim() === "") {
-                setIsValidAuthor(false);
-                authorInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-                authorInputRef.current?.focus();
-            }
-            if (quoteValue.trim() === "") {
-                setIsValidQuote(false);
-                quoteInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-                quoteInputRef.current?.focus();
-            }
+        if (!trimmedAuthor) {
+            setIsValidAuthor(false);
+            authorInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            authorInputRef.current?.focus();
+            return;
         }
-    }
+        if (!trimmedQuote) {
+            setIsValidQuote(false);
+            quoteInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            quoteInputRef.current?.focus();
+            return;
+        }
+
+        const result = (await browser.storage.local.get('quotes')) as { quotes?: QuoteRecord[] };
+        const quotes = Array.isArray(result.quotes) ? result.quotes : [];
+
+        // Duplicate check ignores tombstoned rows.
+        const exists = quotes.some(
+            (q) => !q.deletedAt && q.author === trimmedAuthor && q.quote === trimmedQuote
+        );
+        if (exists) {
+            setIsRepeatedQuote(true);
+            return;
+        }
+
+        const now = new Date().toISOString();
+        const newRecord: QuoteRecord = {
+            id: crypto.randomUUID(),
+            quote: trimmedQuote,
+            author: trimmedAuthor,
+            createdAt: now,
+            deletedAt: null,
+            syncedAt: null,
+        };
+
+        await browser.storage.local.set({ quotes: [...quotes, newRecord] });
+        syncQuotesBg();
+
+        if (callback) callback();
+    };
 
     return (
         <div className="w-[99%] mx-auto">
@@ -78,11 +77,9 @@ export const QuotesForm: React.FC<QuotesFormProps> = ({ callback }) => {
                     id="authorName"
                     value={authorValue}
                     placeholder="Enter Author Name"
-                    onChange={(e) => { setAuthorValue(e.target.value) }}
+                    onChange={(e) => { setAuthorValue(e.target.value); setIsValidAuthor(true); setIsRepeatedQuote(false); }}
                     onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            addQuote();
-                        }
+                        if (e.key === 'Enter') addQuote();
                     }}
                 />
                 {!isValidAuthor && <p className="text-red-500 text-sm mt-2">The author field cannot be empty.</p>}
@@ -90,19 +87,17 @@ export const QuotesForm: React.FC<QuotesFormProps> = ({ callback }) => {
 
             <div className="mt-5">
                 <div className="mt-5 flex items-center" >
-                    <Label htmlFor="authorName"> Quote </Label>
+                    <Label htmlFor="quoteText"> Quote </Label>
                 </div>
                 <Textarea
                     ref={quoteInputRef}
                     className='mt-2'
-                    id="authorName"
+                    id="quoteText"
                     value={quoteValue}
                     placeholder="Enter Quote"
-                    onChange={(e) => { setQuoteValue(e.target.value) }}
+                    onChange={(e) => { setQuoteValue(e.target.value); setIsValidQuote(true); setIsRepeatedQuote(false); }}
                     onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            addQuote();
-                        }
+                        if (e.key === 'Enter') addQuote();
                     }}
                 />
                 {!isValidQuote && <p className="text-red-500 text-sm mt-2">The quote field cannot be empty.</p>}
@@ -115,4 +110,3 @@ export const QuotesForm: React.FC<QuotesFormProps> = ({ callback }) => {
         </div>
     );
 };
-

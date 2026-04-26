@@ -1,4 +1,5 @@
 "use client"
+import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, XAxis, LabelList } from "recharts"
 
@@ -17,13 +18,17 @@ import {
     ChartTooltipContent,
 } from "@/components/ui/chart"
 import { Button } from "@/components/ui/button"
+import type { CounterRecord } from "@/lib/sync"
+import { totalsByDayForKind } from "@/lib/counters"
 
 
 type BlockedPerDayChartProps = {
-    historicalBlockedPerDay: Record<string, Record<string, number>>,
+    counters: CounterRecord[],
 }
 
-export function BlockedPerDayChart({ historicalBlockedPerDay }: BlockedPerDayChartProps) {
+export function BlockedPerDayChart({ counters }: BlockedPerDayChartProps) {
+    // Derive the per-day-per-website map from CounterRecord rows (sum across devices).
+    const historicalBlockedPerDay = totalsByDayForKind(counters, "blocked_count")
 
     const [selectedDay, setSelectedDay] = useState(new Date());
     const [chartData, setChartData] = useState<any[]>([]);

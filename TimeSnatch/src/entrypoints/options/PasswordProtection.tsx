@@ -3,19 +3,25 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
-import { Settings } from '@/models/Settings';
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
-  DialogFooter
 } from '@/components/ui/dialog';
 import { encryptPassword, compareEncrypted } from '@/lib/utils';
-import { syncUpdateSettings } from '@/lib/sync';
+import { syncSettingsBg } from '@/lib/sync';
+
+const writeSettingsField = async (field: string, value: any): Promise<void> => {
+  const result = (await browser.storage.local.get('settings')) as { settings?: Record<string, any> };
+  const settings = { ...(result.settings ?? {}) };
+  settings[field] = value;
+  settings[`${field}UpdatedAt`] = new Date().toISOString();
+  await browser.storage.local.set({ settings });
+  syncSettingsBg();
+};
 
 export function PasswordProtection({
   requirePassword,
@@ -52,13 +58,7 @@ export function PasswordProtection({
   const handlePasswordSubmit = async () => {
     if (password === passwordConfirm) {
       const hashedPassword = await encryptPassword(password);
-      browser.storage.local.get(['settings'], (data) => {
-        const updatedSettings = { ...data.settings, password: hashedPassword };
-        browser.storage.local.set({ settings: updatedSettings }, () => {
-          // Sync to backend (fire-and-forget)
-          syncUpdateSettings({ password: hashedPassword });
-        });
-      });
+      await writeSettingsField('password', hashedPassword);
       setPasswordSaved(true);
       setIsPasswordSetDialogOpen(false);
       setErrorMsg("");
@@ -102,25 +102,18 @@ export function PasswordProtection({
   }
 
   const handlePasswordCheck = async () => {
-    browser.storage.local.get(['settings'], async (data) => {
-      if (data.settings.password) {
-        const isCorrect = await compareEncrypted(passwordCheck, data.settings.password);
-        if (isCorrect) {
-          setRequirePassword(false);
-          setIsPasswordEntryDialogOpen(false);
-          setErrorMsg("");
+    const data = (await browser.storage.local.get(['settings'])) as { settings?: { password?: string } };
+    if (!data.settings?.password) return;
 
-          // Remove password from storage
-          const updatedSettings = { ...data.settings, password: "" };
-          browser.storage.local.set({ settings: updatedSettings }, () => {
-            // Sync to backend (fire-and-forget)
-            syncUpdateSettings({ password: "" });
-          });
-        } else {
-          setErrorMsg("Incorrect password");
-        }
-      }
-    });
+    const isCorrect = await compareEncrypted(passwordCheck, data.settings.password);
+    if (isCorrect) {
+      setRequirePassword(false);
+      setIsPasswordEntryDialogOpen(false);
+      setErrorMsg("");
+      await writeSettingsField('password', "");
+    } else {
+      setErrorMsg("Incorrect password");
+    }
   }
 
 

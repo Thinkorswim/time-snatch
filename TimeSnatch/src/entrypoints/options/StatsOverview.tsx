@@ -17,6 +17,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { convertSecondsToHoursMinutesSeconds } from "@/lib/utils"
+import type { CounterRecord } from "@/lib/sync"
+import { totalsByDayForKind } from "@/lib/counters"
 
 type PeriodKey = "last7" | "last31" | "thisWeek" | "lastWeek" | "thisMonth" | "allTime" | "custom"
 
@@ -32,8 +34,7 @@ type AggregateResult = {
 }
 
 type StatsOverviewProps = {
-  historicalRestrictedTimePerDay: Record<string, Record<string, number>>
-  historicalBlockedPerDay: Record<string, Record<string, number>>
+  counters: CounterRecord[]
 }
 
 const PERIOD_OPTIONS: { value: PeriodKey; label: string }[] = [
@@ -194,10 +195,10 @@ const computePeriodStats = (
   return { totalBlocked, totalRestricted, websiteMap }
 }
 
-export function StatsOverview({
-  historicalRestrictedTimePerDay,
-  historicalBlockedPerDay,
-}: StatsOverviewProps) {
+export function StatsOverview({ counters }: StatsOverviewProps) {
+  // Derive the per-day-per-website maps by summing CounterRecord rows across all devices.
+  const historicalRestrictedTimePerDay = totalsByDayForKind(counters, "restricted_time")
+  const historicalBlockedPerDay = totalsByDayForKind(counters, "blocked_count")
   const today = new Date()
   const todayDate = toDateStr(today)
   const todayLabel = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })

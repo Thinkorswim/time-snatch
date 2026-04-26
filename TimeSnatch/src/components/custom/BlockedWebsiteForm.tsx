@@ -5,37 +5,32 @@ import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Check, Info, Plus, Trash, Trash2, X } from "lucide-react";
 import { Button } from '@/components/ui/button';
-import { BlockedWebsite } from '@/models/BlockedWebsite';
-import { validateURL, extractHostnameAndDomain, extractPathnameAndParams, updateObjectKeyAndData, hasSubdomain, extractHighLevelDomain, timeDisplayFormat, numberToDay } from '@/lib/utils';
+import { validateURL, extractHostnameAndDomain, hasSubdomain, extractHighLevelDomain, timeDisplayFormat, numberToDay } from '@/lib/utils';
 import { RoundSlider, ISettingsPointer } from 'mz-react-round-slider';
-import { syncAddWebsite, syncUpdateWebsite } from '@/lib/sync';
+import { syncBlockedWebsitesBg, type BlockedWebsiteRecord } from '@/lib/sync';
 
 interface BlockedWebsiteFormProps {
-    callback?: () => void; // Generic optional callback
-    blockedWebsiteProp?: BlockedWebsite | null; // Optional blocked website to edit
-    whiteListPathsEnabled?: boolean; // Optional prop to enable/disable allowed paths
+    callback?: () => void;
+    existingRecord?: BlockedWebsiteRecord | null;
+    whiteListPathsEnabled?: boolean;
 }
 
-export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback, blockedWebsiteProp, whiteListPathsEnabled }) => {
-    let initialBlockedWebsiteData: BlockedWebsite;
-    let initialScheduleEnabled = false;
+const blankRecord = (): BlockedWebsiteRecord => ({
+    website: "",
+    timeAllowed: { 0: 300, 1: 300, 2: 300, 3: 300, 4: 300, 5: 300, 6: 300 },
+    blockIncognito: false,
+    variableSchedule: false,
+    redirectUrl: "",
+    scheduledBlockRanges: [],
+    allowedPaths: [],
+    updatedAt: new Date().toISOString(),
+    deletedAt: null,
+    syncedAt: null,
+});
 
-    if (blockedWebsiteProp) {
-        initialBlockedWebsiteData = blockedWebsiteProp;
-        initialScheduleEnabled = blockedWebsiteProp.scheduledBlockRanges.length > 0;
-    } else {
-        initialBlockedWebsiteData = BlockedWebsite.fromJSON({
-            website: "",
-            timeAllowed: { 0: 300, 1: 300, 2: 300, 3: 300, 4: 300, 5: 300, 6: 300 },
-            totalTime: 0,
-            blockIncognito: false,
-            variableSchedule: false,
-            redirectUrl: "",
-            lastAccessedDate: new Date().toLocaleDateString('en-CA').slice(0, 10),
-            scheduledBlockRanges: [],
-            allowedPaths: [],
-        });
-    }
+export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback, existingRecord, whiteListPathsEnabled }) => {
+    const initialBlockedWebsiteData: BlockedWebsiteRecord = existingRecord ?? blankRecord();
+    const initialScheduleEnabled = initialBlockedWebsiteData.scheduledBlockRanges.length > 0;
 
     const [websiteValue, setWebsiteValue] = useState(initialBlockedWebsiteData.website);
     const [websiteSubDomainInfo, setWebsiteSubDomainInfo] = useState<React.ReactNode>(null);
@@ -249,106 +244,92 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
         setSecondaryColor("hsl(" + secondary[0] + "," + secondary[1] + "," + secondary[2] + ")");
     }, []);
 
-    // Add the blocked website to storage
-    const addBlockedWebsite = () => {
-        let blockedWebsite = new BlockedWebsite(
-            websiteValue,
-            timeAllowed,
-            isIncognitoEnabled,
-            isVariableScheduleEnabled,
-            redirectValue
-        );
-
-        blockedWebsite.totalTime = initialBlockedWebsiteData.totalTime;
-
+    // Add or update the blocked website in storage
+    const addBlockedWebsite = async () => {
         if (!validateURL(websiteValue)) {
             setIsValidWebsite(false);
             websiteInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
             websiteInputRef.current?.focus();
             return;
+        }
+        const realUrl = extractHostnameAndDomain(websiteValue);
+        if (!realUrl) {
+            setIsValidWebsite(false);
+            websiteInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            websiteInputRef.current?.focus();
+            return;
+        }
+
+        if (isRedirectEnabled && !validateURL(redirectValue)) {
+            setIsValidRedirect(false);
+            redirectInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            redirectInputRef.current?.focus();
+            return;
+        }
+
+        const scheduledBlockRanges = isScheduleEnabled
+            ? scheduleTimesArray.map((pair, idx) => ({
+                start: ((pair[0].value as number) + 360) % 1440,
+                end: ((pair[1].value as number) + 360) % 1440,
+                days: scheduleDaysArray[idx],
+            }))
+            : [];
+
+        const now = new Date().toISOString();
+        const newRecord: BlockedWebsiteRecord = {
+            website: realUrl,
+            timeAllowed,
+            blockIncognito: isIncognitoEnabled,
+            variableSchedule: isVariableScheduleEnabled,
+            redirectUrl: isRedirectEnabled ? redirectValue : "",
+            scheduledBlockRanges,
+            allowedPaths: allowedPathsArray,
+            updatedAt: now,
+            deletedAt: null,
+            syncedAt: null,
+        };
+
+        const result = (await browser.storage.local.get('blockedWebsites')) as { blockedWebsites?: BlockedWebsiteRecord[] };
+        const list = Array.isArray(result.blockedWebsites) ? result.blockedWebsites : [];
+
+        const previousWebsite = existingRecord?.website ?? null;
+        let updated: BlockedWebsiteRecord[];
+        if (previousWebsite && previousWebsite !== realUrl) {
+            // Rename: tombstone the old row + add the new one. Counters tied to the
+            // old website hostname are preserved (they're still valid as history).
+            updated = [
+                ...list
+                    .filter((w) => w.website !== realUrl)
+                    .map((w) => (w.website === previousWebsite ? { ...w, deletedAt: now, updatedAt: now, syncedAt: null } : w)),
+                newRecord,
+            ];
         } else {
-            const realUrl = extractHostnameAndDomain(websiteValue);
-            if (realUrl) {
-                blockedWebsite.website = realUrl;
+            const idx = list.findIndex((w) => w.website === realUrl);
+            if (idx === -1) {
+                updated = [...list, newRecord];
             } else {
-                setIsValidWebsite(false);
-                websiteInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-                websiteInputRef.current?.focus();
-                return;
+                updated = list.map((w) => (w.website === realUrl ? newRecord : w));
             }
         }
 
-        if (isRedirectEnabled) {
-            if (!validateURL(redirectValue)) {
-                setIsValidRedirect(false);
-                redirectInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-                redirectInputRef.current?.focus();
-                return;
-            }
-        } else {
-            blockedWebsite.redirectUrl = "";
-        }
-        
-        blockedWebsite.allowedPaths = allowedPathsArray;
+        await browser.storage.local.set({ blockedWebsites: updated });
+        syncBlockedWebsitesBg();
 
-        if (isScheduleEnabled) {
-            blockedWebsite.scheduledBlockRanges = scheduleTimesArray.map((pair, idx) => ({
-                start: (pair[0].value as number + 360) % 1440,
-                end: (pair[1].value as number + 360) % 1440,
-                days: scheduleDaysArray[idx]
-            }));
-        }
+        if (callback) callback();
 
-        browser.storage.local.get("blockedWebsitesList", (data) => {
-            const currentList = data.blockedWebsitesList || {};
-            const realUrl = extractHostnameAndDomain(websiteValue)!;
-
-            let updatedList = {};
-
-            if (blockedWebsiteProp && blockedWebsiteProp.website !== blockedWebsite.website) {
-                updatedList = updateObjectKeyAndData(
-                    currentList,
-                    blockedWebsiteProp.website,
-                    blockedWebsite.website,
-                    blockedWebsite.toJSON()
-                )
-            } else {
-                updatedList = {
-                    ...currentList,
-                    [realUrl]: blockedWebsite.toJSON(),
-                };
-            }
-
-            browser.storage.local.set({ blockedWebsitesList: updatedList }, () => {
-                // Sync to backend (fire-and-forget)
-                if (blockedWebsiteProp) {
-                    // Editing existing website
-                    syncUpdateWebsite(blockedWebsite.toJSON());
-                } else {
-                    // Adding new website
-                    syncAddWebsite(blockedWebsite.toJSON());
-                }
-
-                // Close the dialog
-                if (callback) {
-                    callback();
-                }
-
-                // Clear the form
-                setWebsiteValue("");
-                setIsValidWebsite(true);
-                setIsIncognitoEnabled(false);
-                setIsRedirectEnabled(false);
-                setRedirectValue("");
-                setIsValidRedirect(true);
-                setIsScheduleEnabled(false);
-                setTimeAllowedMinutes([{ value: 5 }]);
-                setTimeAllowedHours([{ value: 0 }]);
-                setScheduleTimesArray([[{ value: 180 }, { value: 660 }]]);
-                setWebsiteSubDomainInfo(null);
-                setAllowedPathsArray([]);
-            });
-        });
+        // Reset form (only meaningful for the "add" flow).
+        setWebsiteValue("");
+        setIsValidWebsite(true);
+        setIsIncognitoEnabled(false);
+        setIsRedirectEnabled(false);
+        setRedirectValue("");
+        setIsValidRedirect(true);
+        setIsScheduleEnabled(false);
+        setTimeAllowedMinutes([{ value: 5 }]);
+        setTimeAllowedHours([{ value: 0 }]);
+        setScheduleTimesArray([[{ value: 180 }, { value: 660 }]]);
+        setWebsiteSubDomainInfo(null);
+        setAllowedPathsArray([]);
     };
 
     const handleWebsiteInput = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -960,7 +941,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
 
 
             <div className='w-full text-right mb-2'>
-                <Button className="mt-8" onClick={addBlockedWebsite}>  {blockedWebsiteProp ? "Save Website" : "Block Website"} </Button>
+                <Button className="mt-8" onClick={addBlockedWebsite}>  {existingRecord ? "Save Website" : "Block Website"} </Button>
             </div>
 
         </div >

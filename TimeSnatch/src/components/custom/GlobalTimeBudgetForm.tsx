@@ -7,29 +7,18 @@ import { Check, Info, Plus, X } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { validateURL, timeDisplayFormat, numberToDay } from '@/lib/utils';
 import { RoundSlider, ISettingsPointer } from 'mz-react-round-slider';
-import { GlobalTimeBudget } from '@/models/GlobalTimeBudget';
-import { syncUpdateGroupBudget } from '@/lib/sync';
+import { syncGroupBudgetsBg, type GroupBudgetRecord } from '@/lib/sync';
 
 interface GlobalTimeBudgetFormProps {
-    callback?: () => void; // Generic optional callback
-    globalTimeBudgetProp: GlobalTimeBudget | null; // Optional blocked website to edit
-    budgetIndex?: number; // Index in the groupTimeBudgets array
+    callback?: () => void;
+    existingBudget: GroupBudgetRecord;
 }
 
-export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ callback, globalTimeBudgetProp, budgetIndex = 0 }) => {
-    if (!globalTimeBudgetProp) {
-        globalTimeBudgetProp = GlobalTimeBudget.fromJSON({
-            websites: [], // Expect an array of strings
-            timeAllowed: { 0: 300, 1: 300, 2: 300, 3: 300, 4: 300, 5: 300, 6: 300 },
-            totalTime: 0,
-            blockIncognito: false,
-            variableSchedule: false,
-            redirectUrl: "",
-            lastAccessedDate: new Date().toLocaleDateString('en-CA').slice(0, 10),
-            scheduledBlockRanges: []
-        })
-    }
+export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ callback, existingBudget }) => {
+    // Local alias to avoid renaming every reference below.
+    const globalTimeBudgetProp: GroupBudgetRecord = existingBudget;
 
+    const [name, setName] = useState(globalTimeBudgetProp.name || '');
     const [isIncognitoEnabled, setIsIncognitoEnabled] = useState(globalTimeBudgetProp.blockIncognito);
 
     const [isRedirectEnabled, setIsRedirectEnabled] = useState(globalTimeBudgetProp.redirectUrl !== "");
@@ -216,58 +205,43 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
     }, []);
 
     // Add the blocked website to storage
-    const updateGlobalTimeBudget = () => {
-        let globalTimeBudget = new GlobalTimeBudget(
-            globalTimeBudgetProp.websites, // Expect an array of strings
+    const updateGlobalTimeBudget = async () => {
+        if (isRedirectEnabled && !validateURL(redirectValue)) {
+            setIsValidRedirect(false);
+            redirectInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            redirectInputRef.current?.focus();
+            return;
+        }
+
+        const scheduledBlockRanges = isScheduleEnabled
+            ? scheduleTimesArray.map((pair, idx) => ({
+                start: ((pair[0].value as number) + 360) % 1440,
+                end: ((pair[1].value as number) + 360) % 1440,
+                days: scheduleDaysArray[idx],
+            }))
+            : [];
+
+        const now = new Date().toISOString();
+        const updatedRecord: GroupBudgetRecord = {
+            ...globalTimeBudgetProp,
+            name,
             timeAllowed,
-            isIncognitoEnabled,
-            isVariableScheduleEnabled,
-            redirectValue
-        )
+            blockIncognito: isIncognitoEnabled,
+            variableSchedule: isVariableScheduleEnabled,
+            redirectUrl: isRedirectEnabled ? redirectValue : "",
+            scheduledBlockRanges,
+            updatedAt: now,
+            syncedAt: null,
+        };
 
-        globalTimeBudget.totalTime = globalTimeBudgetProp.totalTime;
+        const result = (await browser.storage.local.get('groupBudgets')) as { groupBudgets?: GroupBudgetRecord[] };
+        const list = Array.isArray(result.groupBudgets) ? result.groupBudgets : [];
+        const updated = list.map((g) => (g.id === globalTimeBudgetProp.id ? updatedRecord : g));
 
-        if (isRedirectEnabled) {
-            if (!validateURL(redirectValue)) {
-                setIsValidRedirect(false);
-                redirectInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-                redirectInputRef.current?.focus();
-                return;
-            }
-        } else {
-            globalTimeBudget.redirectUrl = "";
-        }
+        await browser.storage.local.set({ groupBudgets: updated });
+        syncGroupBudgetsBg();
 
-        if (isScheduleEnabled) {
-            globalTimeBudget.scheduledBlockRanges = scheduleTimesArray.map((pair, idx) => ({
-                start: (pair[0].value as number + 360) % 1440,
-                end: (pair[1].value as number + 360) % 1440,
-                days: scheduleDaysArray[idx]
-            }));
-        }
-
-        // Load all budgets, update the one at budgetIndex, and save
-        browser.storage.local.get(['groupTimeBudgets'], (data) => {
-            if (data.groupTimeBudgets && Array.isArray(data.groupTimeBudgets)) {
-                const allBudgets = data.groupTimeBudgets.map((b: any) => GlobalTimeBudget.fromJSON(b));
-                
-                // Update the budget at the specified index
-                if (budgetIndex >= 0 && budgetIndex < allBudgets.length) {
-                    allBudgets[budgetIndex] = globalTimeBudget;
-                }
-                
-                browser.storage.local.set({ groupTimeBudgets: allBudgets.map(b => b.toJSON()) }, () => {
-                    // Sync to backend (fire-and-forget)
-                    syncUpdateGroupBudget(budgetIndex, globalTimeBudget.toJSON());
-                    
-                    // Close the dialog
-                    if (callback) {
-                        callback();
-                    }
-                });
-            }
-        });
-
+        if (callback) callback();
     };
 
     const addScheduleRange = () => {
@@ -287,6 +261,18 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
 
     return (
         <div className="w-[99%] mx-auto">
+
+            <div className="mt-2">
+                <Label htmlFor="budget-name">Budget Name</Label>
+                <Input
+                    className="mt-2 max-w-[250px]"
+                    id="budget-name"
+                    value={name}
+                    placeholder="e.g. Social Media"
+                    onChange={(e) => setName(e.target.value)}
+                    maxLength={30}
+                />
+            </div>
 
             <div className="mt-5 flex items-center justify-between max-w-[250px]">
                 <div className="flex items-center">

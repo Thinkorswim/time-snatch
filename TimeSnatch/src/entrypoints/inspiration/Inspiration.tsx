@@ -17,9 +17,12 @@ function Inspiration() {
     setReason(params.get('reason') || '');
 
     browser.storage.local.get(['quotes'], (data) => {
-      if (data.quotes && data.quotes.length > 0) {
-        const randomIndex = Math.floor(Math.random() * data.quotes.length);
-        setSelectedQuote(data.quotes[randomIndex]);
+      const all = Array.isArray(data.quotes) ? data.quotes : [];
+      const visible = all.filter((q: any) => q && !q.deletedAt && typeof q.quote === 'string');
+      if (visible.length > 0) {
+        const randomIndex = Math.floor(Math.random() * visible.length);
+        const pick = visible[randomIndex];
+        setSelectedQuote({ quote: pick.quote, author: pick.author ?? '' });
       }
     });
   }, []);

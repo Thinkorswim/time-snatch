@@ -6,16 +6,17 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button";
+import type { QuoteRecord } from '@/lib/sync';
 
 
 type QuotesTableProps = {
-    quotes: Array<{ author: string; quote: string }> | null;
+    quotes: QuoteRecord[] | null;
     addQuote: () => void;
-    deleteQuote: (quoteDetails: { author: string; quote: string }) => void;
+    deleteQuote: (record: QuoteRecord) => void;
 };
 
 export const QuotesTable: React.FC<QuotesTableProps> = ({ quotes, addQuote, deleteQuote }) => {
@@ -34,26 +35,24 @@ export const QuotesTable: React.FC<QuotesTableProps> = ({ quotes, addQuote, dele
                             <TableHead className="text-center pr-4">Options</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody> 
+                    <TableBody>
                         {(quotes === null || quotes.length === 0) && (
                             <TableRow className="h-52">
-                                <TableCell colSpan={7} className="text-center">No quotes to show.</TableCell>
+                                <TableCell colSpan={3} className="text-center">No quotes to show.</TableCell>
                             </TableRow>
                         )}
-                        {quotes && quotes.length >= 0 && (
-                            quotes.map(({ author, quote }) => (
-                                <TableRow key={`${author}-${quote}`}>
-                                    <TableCell className="font-medium">{author}</TableCell>
-                                    <TableCell>{quote}</TableCell>
-                                    <TableCell className="flex justify-center items-center space-x-2">
-                                        <Trash2
-                                            className="w-5 h-5 text-chart-5 cursor-pointer"
-                                            onClick={() => deleteQuote({ author, quote })}
-                                        />
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
+                        {quotes && quotes.map((record) => (
+                            <TableRow key={record.id}>
+                                <TableCell className="font-medium">{record.author}</TableCell>
+                                <TableCell>{record.quote}</TableCell>
+                                <TableCell className="flex justify-center items-center space-x-2">
+                                    <Trash2
+                                        className="w-5 h-5 text-chart-5 cursor-pointer"
+                                        onClick={() => deleteQuote(record)}
+                                    />
+                                </TableCell>
+                            </TableRow>
+                        ))}
                     </TableBody>
                 </Table>
             </ScrollArea>

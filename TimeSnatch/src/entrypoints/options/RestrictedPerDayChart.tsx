@@ -1,4 +1,5 @@
 "use client"
+import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, XAxis, LabelList } from "recharts"
 
@@ -18,13 +19,16 @@ import {
 } from "@/components/ui/chart"
 import { timeDisplayFormat } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import type { CounterRecord } from "@/lib/sync"
+import { totalsByDayForKind } from "@/lib/counters"
 
 
 type RestrictedPerDayChartProps = {
-    historicalRestrictedTimePerDay: Record<string, Record<string, number>>,
+    counters: CounterRecord[],
 }
 
-export function RestrictedPerDayChart({ historicalRestrictedTimePerDay }: RestrictedPerDayChartProps) {
+export function RestrictedPerDayChart({ counters }: RestrictedPerDayChartProps) {
+    const historicalRestrictedTimePerDay = totalsByDayForKind(counters, "restricted_time")
 
     const [selectedDay, setSelectedDay] = useState(new Date());
     const [chartData, setChartData] = useState<any[]>([]);

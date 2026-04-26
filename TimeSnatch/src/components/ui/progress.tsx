@@ -2,27 +2,27 @@ import * as React from "react"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
 
 import { cn, timeDisplayFormat } from "@/lib/utils"
-import { BlockedWebsite } from "@/models/BlockedWebsite";
+import type { BlockedWebsiteRecord } from "@/lib/sync"
 
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> & {
-    blockedWebsite: BlockedWebsite | null;
+    blockedWebsite: BlockedWebsiteRecord | null;
+    usedToday: number;
   }
->(({ className, blockedWebsite, ...props }, ref) => {
+>(({ className, blockedWebsite, usedToday, ...props }, ref) => {
 
   const dayOfTheWeek = (new Date().getDay() + 6) % 7;
 
   const progressPercentage = React.useMemo(() => {
     if (!blockedWebsite) return 0;
-    if (blockedWebsite.timeAllowed[dayOfTheWeek] == -1) return 0;
-    if (blockedWebsite.totalTime >= blockedWebsite.timeAllowed[dayOfTheWeek]) return 100;
-    return (
-      (100 - (Math.abs(blockedWebsite.timeAllowed[dayOfTheWeek] - blockedWebsite.totalTime) /
-        blockedWebsite.timeAllowed[dayOfTheWeek]) * 100)
-    );
-  }, [blockedWebsite, dayOfTheWeek]);
+    const allowed = blockedWebsite.timeAllowed[String(dayOfTheWeek)];
+    if (allowed === -1) return 0;
+    if (usedToday >= allowed) return 100;
+    return 100 - (Math.abs(allowed - usedToday) / allowed) * 100;
+  }, [blockedWebsite, dayOfTheWeek, usedToday]);
 
+  const allowed = blockedWebsite?.timeAllowed[String(dayOfTheWeek)];
 
   return (
     <ProgressPrimitive.Root
@@ -33,31 +33,26 @@ const Progress = React.forwardRef<
       )}
       {...props}
     >
-
       {blockedWebsite ? (
         <>
           <ProgressPrimitive.Indicator
             className="h-full w-full flex-1 bg-primary transition-all"
-            style={{ transform: `translateX(-${100 - (progressPercentage)}%)` }}
+            style={{ transform: `translateX(-${100 - progressPercentage}%)` }}
           />
           <div className="absolute inset-0 flex items-center justify-between px-4 text-sm font-normal text-muted-foreground">
-            <div> {blockedWebsite.website}</div>
-            {blockedWebsite.timeAllowed[dayOfTheWeek] == -1 ? (
+            <div>{blockedWebsite.website}</div>
+            {allowed === -1 ? (
               <div>Day Off</div>
             ) : (
-              <div> {timeDisplayFormat(blockedWebsite.timeAllowed[dayOfTheWeek] - blockedWebsite.totalTime)}</div>
+              <div>{timeDisplayFormat((allowed ?? 0) - usedToday)}</div>
             )}
           </div>
         </>
       ) : (
-        <>
-
-          <div className="absolute inset-0 flex items-center justify-between ">
-            <div> Loading</div>
-          </div>
-        </>
+        <div className="absolute inset-0 flex items-center justify-between ">
+          <div>Loading</div>
+        </div>
       )}
-
     </ProgressPrimitive.Root>
   )
 });
