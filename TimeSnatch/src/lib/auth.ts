@@ -1,4 +1,4 @@
-import { User } from "../models/User.ts";
+import { User, type PlanType } from "../models/User.ts";
 import { syncAll } from "@/lib/sync.ts";
 
 const BASE_URL = "https://api.groundedmomentum.com";
@@ -9,6 +9,7 @@ export interface AuthResponse {
     emailVerified: boolean;
     authToken: string;
     extensionsPlus?: boolean;
+    planType?: PlanType | null;
   };
   message?: string;
 }
@@ -19,6 +20,7 @@ export interface UserData {
     emailVerified: boolean;
     authToken: string;
     extensionsPlus: boolean;
+    planType?: PlanType | null;
   };
 }
 

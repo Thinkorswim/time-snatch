@@ -7,6 +7,7 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Trash2 } from "lucide-react";
+import { t, useLocale } from "@/lib/i18n";
 
 
 type GlobalTimeBudgetTableProps = {
@@ -15,18 +16,19 @@ type GlobalTimeBudgetTableProps = {
 };
 
 export const GlobalTimeBudgetTable: React.FC<GlobalTimeBudgetTableProps> = ({ globalTimeBudgetWebsites, deleteBlockedWebsite }) => {
+    useLocale();
     return (
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead>Website</TableHead>
-                    <TableHead className="text-center">Options</TableHead>
+                    <TableHead>{t('groupTimeBudgetTable.website')}</TableHead>
+                    <TableHead className="text-center">{t('groupTimeBudgetTable.options')}</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {globalTimeBudgetWebsites.length === 0 && (
                     <TableRow className="h-52">
-                        <TableCell colSpan={2} className="text-center">No global blocked websites to display.</TableCell>
+                        <TableCell colSpan={2} className="text-center">{t('groupTimeBudgetTable.noWebsites')}</TableCell>
                     </TableRow>
                 )}
                 {globalTimeBudgetWebsites.map((website) => (

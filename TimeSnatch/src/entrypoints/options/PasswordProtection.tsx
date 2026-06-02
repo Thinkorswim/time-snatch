@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { encryptPassword, compareEncrypted } from '@/lib/utils';
+import { t, useLocale } from "@/lib/i18n";
 import { syncSettingsBg } from '@/lib/sync';
 
 const writeSettingsField = async (field: string, value: any): Promise<void> => {
@@ -30,6 +31,7 @@ export function PasswordProtection({
   requirePassword: boolean;
   setRequirePassword: (checked: boolean) => void;
 }) {
+  useLocale();
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [isPasswordSetDialogOpen, setIsPasswordSetDialogOpen] = useState(false);
@@ -66,7 +68,7 @@ export function PasswordProtection({
       setPasswordStep(1);
       setPasswordConfirm("");
     } else {
-      setErrorMsg("Passwords do not match");
+      setErrorMsg(t("password.passwordsMismatch"));
     }
   }
 
@@ -74,7 +76,7 @@ export function PasswordProtection({
     if (password.length > 0) {
       setPasswordStep(2);
     } else {
-      setErrorMsg("Password cannot be empty");
+      setErrorMsg(t("password.passwordEmpty"));
     }
   }
 
@@ -112,7 +114,7 @@ export function PasswordProtection({
       setErrorMsg("");
       await writeSettingsField('password', "");
     } else {
-      setErrorMsg("Incorrect password");
+      setErrorMsg(t("password.incorrect"));
     }
   }
 
@@ -121,7 +123,7 @@ export function PasswordProtection({
     <>
       <div className="flex items-center justify-between max-w-[300px]">
         <div className="flex items-center">
-          <Label className='text-base' htmlFor="requirePassword">Password Protection</Label>
+          <Label className='text-base' htmlFor="requirePassword">{t('password.label')}</Label>
           <TooltipProvider>
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
@@ -130,7 +132,7 @@ export function PasswordProtection({
                 </button>
               </TooltipTrigger>
               <TooltipContent className="bg-primary text-foreground p-2 rounded">
-                Prompt for a password before editing or removing blocked websites.
+                {t('password.tooltip')}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -146,13 +148,13 @@ export function PasswordProtection({
       <Dialog open={isPasswordSetDialogOpen} onOpenChange={handlePasswordSetDialogChange} >
         <DialogContent className="bg-card" >
           <div className='bg-card m-2 p-4 rounded-md'>
-            <DialogTitle>Password Protection</DialogTitle>
+            <DialogTitle>{t('password.setTitle')}</DialogTitle>
             <DialogDescription>
               <div className="w-[99%] mx-auto">
                 <div className="mt-5">
                   <div className="mt-5 flex items-center" >
                     <Label htmlFor={passwordStep === 1 ? 'password' : 'passwordConfirm'}>
-                      {passwordStep === 1 ? 'Password' : 'Repeat Password'}
+                      {passwordStep === 1 ? t('password.password') : t('password.repeatPassword')}
                     </Label>
                     <TooltipProvider>
                       <Tooltip delayDuration={0}>
@@ -162,7 +164,7 @@ export function PasswordProtection({
                           </button>
                         </TooltipTrigger>
                         <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                          You will not be able to recover this passsword if you forget or lose it. <br /> Let a trusted person input it or write it down.
+                          {t('password.setTooltip1')} <br /> {t('password.setTooltip2')}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -174,7 +176,7 @@ export function PasswordProtection({
                         type='password'
                         id="password"
                         value={password}
-                        placeholder="Enter password"
+                        placeholder={t('password.placeholder')}
                         onChange={(e) => setPassword(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
@@ -183,7 +185,7 @@ export function PasswordProtection({
                         }}
                       />
                       <div className='w-full text-right mb-2'>
-                        <Button className="mt-5" onClick={() => handleStep1() }> Next </Button>
+                        <Button className="mt-5" onClick={() => handleStep1() }> {t('password.next')} </Button>
                       </div>
                     </>
                   )}
@@ -195,7 +197,7 @@ export function PasswordProtection({
                         type='password'
                         id="passwordConfirm"
                         value={passwordConfirm}
-                        placeholder="Enter password"
+                        placeholder={t('password.placeholder')}
                         onChange={(e) => setPasswordConfirm(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
@@ -205,8 +207,8 @@ export function PasswordProtection({
                         ref={confirmRef}
                       />
                       <div className='w-full text-right mb-2'>
-                        <Button className="mt-5" onClick={() => setPasswordStep(1)}> Back </Button>
-                        <Button className="ml-2 mt-5" onClick={() => handlePasswordSubmit()}> Confirm </Button>
+                        <Button className="mt-5" onClick={() => setPasswordStep(1)}> {t('password.back')} </Button>
+                        <Button className="ml-2 mt-5" onClick={() => handlePasswordSubmit()}> {t('password.confirm')} </Button>
                       </div>
                     </>
                   )}
@@ -223,13 +225,13 @@ export function PasswordProtection({
       <Dialog open={isPasswordEntryDialogOpen} onOpenChange={handlePasswordEntryDialogChange} >
         <DialogContent className="bg-card" >
           <div className='bg-card m-2 p-4 rounded-md'>
-            <DialogTitle>Disable Password Protection</DialogTitle>
+            <DialogTitle>{t('password.disableTitle')}</DialogTitle>
             <DialogDescription>
               <div className="w-[99%] mx-auto">
                 <div className="mt-5">
                   <div className="mt-5 flex items-center" >
                     <Label htmlFor="password">
-                      Password
+                      {t('password.password')}
                     </Label>
                     <TooltipProvider>
                       <Tooltip delayDuration={0}>
@@ -239,7 +241,7 @@ export function PasswordProtection({
                           </button>
                         </TooltipTrigger>
                         <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                          Enter the password to disable password protection. <br /> You need to delete the extension and reinstall it to reset the password.
+                          {t('password.disableTooltip1')} <br /> {t('password.disableTooltip2')}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -250,7 +252,7 @@ export function PasswordProtection({
                       type='password'
                       id="passwordCheck"
                       value={passwordCheck}
-                      placeholder="Enter password"
+                      placeholder={t('password.placeholder')}
                       onChange={(e) => setPasswordCheck(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -259,7 +261,7 @@ export function PasswordProtection({
                       }}
                     />
                     <div className='w-full text-right mb-2'>
-                      <Button className="mt-5" onClick={() => handlePasswordCheck()}> Disable </Button>
+                      <Button className="mt-5" onClick={() => handlePasswordCheck()}> {t('password.disable')} </Button>
                     </div>
                   </>
 

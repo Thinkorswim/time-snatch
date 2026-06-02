@@ -32,8 +32,14 @@ import {
 } from "@/lib/auth";
 import {
   paymentPageRedirect,
+  fetchLocalizedPrices,
+  getPaymentManagementLinks,
+  PLANS,
+  type Plan,
+  type LocalizedPrices,
 } from "@/lib/payments";
 import { hasApiPermission, requestApiPermission } from "@/lib/permissions";
+import { t, useLocale } from "@/lib/i18n";
 
 type Browser = "chrome" | "firefox" | "edge";
 
@@ -61,7 +67,10 @@ const STORE_URLS = {
   },
 } as const;
 
+const GM_DESKTOP_URL = "https://groundedmomentum.com/";
+
 export function GMPlus() {
+  useLocale();
   const [isLogin, setIsLogin] = useState<boolean>(true);
   const browser = detectBrowser();
   const cdUrl = STORE_URLS.cadence[browser];
@@ -85,18 +94,40 @@ export function GMPlus() {
     useState<boolean>(false);
   const [showPermissionDialog, setShowPermissionDialog] =
     useState<boolean>(false);
+  const [selectedPlan, setSelectedPlan] = useState<Plan>("yearly");
+  const [prices, setPrices] = useState<LocalizedPrices | null>(null);
+  const [isManageLoading, setIsManageLoading] = useState<boolean>(false);
 
   const handlePayment = async () => {
     setIsPaymentLoading(true);
     setError("");
 
     try {
-      await paymentPageRedirect(user.authToken);
+      await paymentPageRedirect(user.authToken, selectedPlan);
     } catch (error) {
-      setError("Failed to redirect to payment page");
+      setError(t("gmPlus.errorPaymentRedirect"));
     }
 
     setIsPaymentLoading(false);
+  };
+
+  const handleManageSubscription = async () => {
+    setIsManageLoading(true);
+    setError("");
+
+    try {
+      const links = await getPaymentManagementLinks(user.authToken);
+      const url = links?.cancelUrl || links?.portalUrl;
+      if (url) {
+        window.open(url, "_blank");
+      } else {
+        setError(t("gmPlus.errorNoSubscriptionLink"));
+      }
+    } catch (error) {
+      setError(t("gmPlus.errorManageSubscription"));
+    }
+
+    setIsManageLoading(false);
   };
 
   const handleSignOut = () => {
@@ -119,7 +150,8 @@ export function GMPlus() {
           freshUserData.data.email,
           freshUserData.data.emailVerified || false,
           user.authToken,
-          freshUserData.data.extensionsPlus || false
+          freshUserData.data.extensionsPlus || false,
+          freshUserData.data.planType ?? null
         );
         setUser(updatedUser);
         saveUserToStorage(updatedUser);
@@ -138,14 +170,14 @@ export function GMPlus() {
     setIsLoading(true);
 
     if (!user.email) {
-      setError("No email address found. Please sign in again.");
+      setError(t("gmPlus.errorNoEmail"));
       return;
     }
 
     try {
       await resendVerificationEmailRequest(user.email);
     } catch (error) {
-      setError("Failed to resend verification email");
+      setError(t("gmPlus.errorResendVerification"));
     }
 
     setIsLoading(false);
@@ -166,13 +198,13 @@ export function GMPlus() {
     setIsLoading(true);
 
     if (!email || !password) {
-      setError("Email and password are required");
+      setError(t("gmPlus.errorEmailPasswordRequired"));
       setIsLoading(false);
       return;
     }
 
     if (!isLogin && password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("gmPlus.errorPasswordsMismatch"));
       setIsLoading(false);
       return;
     }
@@ -185,7 +217,7 @@ export function GMPlus() {
         data = await signInRequest(email, password);
       }
     } catch (err: any) {
-      setError(err.message || "Authentication failed");
+      setError(err.message || t("gmPlus.errorAuthFailed"));
       setIsLoading(false);
       return;
     }
@@ -194,7 +226,8 @@ export function GMPlus() {
       email,
       data.user?.emailVerified || false,
       data.user?.authToken || "",
-      data.user?.extensionsPlus || false
+      data.user?.extensionsPlus || false,
+      data.user?.planType ?? null
     );
 
     setUser(newUser);
@@ -223,7 +256,8 @@ export function GMPlus() {
         data.user.email,
         data.user.emailVerified || false,
         data.user.authToken || "",
-        data.user.extensionsPlus || false
+        data.user.extensionsPlus || false,
+        data.user.planType ?? null
       );
 
       setUser(newUser);
@@ -231,7 +265,7 @@ export function GMPlus() {
 
       triggerSyncForProUser(newUser.authToken, newUser.extensionsPlus);
     } catch (err: any) {
-      setError(err.message || "Google sign-in failed");
+      setError(err.message || t("gmPlus.errorGoogleSignIn"));
     }
 
     setIsLoading(false);
@@ -243,7 +277,7 @@ export function GMPlus() {
     setIsForgotPasswordLoading(true);
 
     if (!forgotPasswordEmail) {
-      setError("Email is required");
+      setError(t("gmPlus.errorEmailRequired"));
       setIsForgotPasswordLoading(false);
       return;
     }
@@ -252,10 +286,10 @@ export function GMPlus() {
       const response = await forgotPasswordRequest(forgotPasswordEmail);
       setForgotPasswordMessage(
         response.message ||
-          "Password reset email sent successfully! Please check your inbox."
+          t("gmPlus.resetEmailSent")
       );
     } catch (error) {
-      setError("Failed to send password reset email");
+      setError(t("gmPlus.errorForgotPassword"));
     }
 
     setIsForgotPasswordLoading(false);
@@ -291,21 +325,24 @@ export function GMPlus() {
     checkBackendPermission();
   }, []);
 
+  useEffect(() => {
+    fetchLocalizedPrices().then(setPrices);
+  }, []);
+
   return (
     <>
       <div className="flex items-center justify-between mb-5 mt-10">
         <div className="text-3xl font-bold text-muted-foreground">
-          Grounded Momentum
+          {t("gmPlus.title")}
         </div>
       </div>
 
       <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>
         <DialogContent className="sm:max-w-md p-8">
           <DialogHeader className="mb-4">
-            <DialogTitle className="text-xl mb-2">Permission Required</DialogTitle>
+            <DialogTitle className="text-xl mb-2">{t("gmPlus.permissionRequired")}</DialogTitle>
             <DialogDescription className="text-sm leading-relaxed">
-              To sign in or create an account, we need permission to connect to
-              our servers. This is required for authentication and sync features.
+              {t("gmPlus.permissionExplain")}
             </DialogDescription>
           </DialogHeader>
         </DialogContent>
@@ -319,34 +356,34 @@ export function GMPlus() {
               /* Active Plus view */
               <>
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-green-500 rounded-lg">
+                  <div className="p-2 bg-gradient-to-r from-chart-1 to-chart-2 rounded-lg">
                     <Sparkles className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold">GM Extensions Plus Active</h3>
+                    <h3 className="text-xl font-semibold">{t("gmPlus.activeTitle")}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Thank you for your support!
+                      {t("gmPlus.activeSubtitle")}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Your Extensions
+                    {t("gmPlus.yourExtensions")}
                   </p>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5">
                       <div className="flex items-center space-x-3">
                         <img src="/icon/128.png" className="w-8 h-8 rounded-md" />
                         <div>
-                          <p className="text-sm font-medium">Time Snatch</p>
+                          <p className="text-sm font-medium">{t("gmPlus.timeSnatchName")}</p>
                           <p className="text-xs text-muted-foreground">
-                            Block distracting websites
+                            {t("gmPlus.timeSnatchDescription")}
                           </p>
                         </div>
                       </div>
                       <span className="text-xs text-muted-foreground font-medium bg-primary/10 px-2 py-0.5 rounded-full">
-                        Current
+                        {t("gmPlus.current")}
                       </span>
                     </div>
 
@@ -359,9 +396,9 @@ export function GMPlus() {
                       <div className="flex items-center space-x-3">
                         <img src="/icon/cd-128.png" className="w-8 h-8 rounded-md" />
                         <div>
-                          <p className="text-sm font-medium">Cadence</p>
+                          <p className="text-sm font-medium">{t("gmPlus.cadenceName")}</p>
                           <p className="text-xs text-muted-foreground">
-                            Pomodoro focus timers
+                            {t("gmPlus.cadenceDescription")}
                           </p>
                         </div>
                       </div>
@@ -377,15 +414,83 @@ export function GMPlus() {
                       <div className="flex items-center space-x-3">
                         <img src="/icon/gc-128.png" className="w-8 h-8 rounded-md" />
                         <div>
-                          <p className="text-sm font-medium">GramControl</p>
+                          <p className="text-sm font-medium">{t("gmPlus.gramControlName")}</p>
                           <p className="text-xs text-muted-foreground">
-                            Block Instagram distractions
+                            {t("gmPlus.gramControlDescription")}
                           </p>
                         </div>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-muted-foreground transition-colors" />
                     </a>
                   </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t("gmPlus.yourApp")}
+                  </p>
+                  <div className="space-y-2">
+                    <a
+                      href={GM_DESKTOP_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 hover:border-primary/30 transition-colors group no-underline"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <img src="/icon/gm-128.png" className="w-8 h-8 rounded-md" />
+                        <div>
+                          <p className="text-sm font-medium">{t("gmPlus.desktopName")}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t("gmPlus.desktopDescription")}
+                          </p>
+                        </div>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-muted-foreground transition-colors" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Subscription management */}
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t("gmPlus.subscription")}
+                  </p>
+                  {user.planType === "lifetime" ? (
+                    <div className="p-3 rounded-lg border border-border bg-muted/30">
+                      <p className="text-sm">
+                        {t("gmPlus.lifetimeAccess")}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="w-full hover:bg-primary/20"
+                        onClick={handleManageSubscription}
+                        disabled={isManageLoading}
+                      >
+                        {isManageLoading ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            {t("gmPlus.opening")}
+                          </>
+                        ) : (
+                          <>
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            {t("gmPlus.manageSubscription")}
+                          </>
+                        )}
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        {t("gmPlus.subscriptionHint")}
+                      </p>
+                    </>
+                  )}
+                  {error && (
+                    <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                      {error}
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
@@ -397,9 +502,9 @@ export function GMPlus() {
                     <Sparkles className="w-6 h-6 text-muted-foreground" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold">Unlock GM Extensions Plus</h3>
+                    <h3 className="text-xl font-semibold">{t("gmPlus.salesTitle")}</h3>
                     <p className="text-sm text-muted-foreground">
-                      One subscription, all of our extensions
+                      {t("gmPlus.salesSubtitle")}
                     </p>
                   </div>
                 </div>
@@ -407,10 +512,10 @@ export function GMPlus() {
                 {/* Benefits with checkmarks */}
                 <div className="space-y-3">
                   {[
-                    "Cloud data backup",
-                    "Cross-device & cross-browser sync",
-                    "Access to all current and future plus features",
-                    "Support open-source development",
+                    t("gmPlus.benefit1"),
+                    t("gmPlus.benefit2"),
+                    t("gmPlus.benefit3"),
+                    t("gmPlus.benefit4"),
                   ].map((text) => (
                     <div key={text} className="flex items-center space-x-3">
                       <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
@@ -424,21 +529,21 @@ export function GMPlus() {
                 {/* Extensions Included */}
                 <div className="space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    3 Extensions Included
+                    {t("gmPlus.includedHeader")}
                   </p>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5">
                       <div className="flex items-center space-x-3">
                         <img src="/icon/128.png" className="w-8 h-8 rounded" />
                         <div>
-                          <p className="text-sm font-medium">Time Snatch</p>
+                          <p className="text-sm font-medium">{t("gmPlus.timeSnatchName")}</p>
                           <p className="text-xs text-muted-foreground">
-                            Block distracting websites
+                            {t("gmPlus.timeSnatchDescription")}
                           </p>
                         </div>
                       </div>
                       <span className="text-xs text-muted-foreground font-medium bg-primary/10 px-2 py-0.5 rounded-full">
-                        Current
+                        {t("gmPlus.current")}
                       </span>
                     </div>
 
@@ -451,9 +556,9 @@ export function GMPlus() {
                       <div className="flex items-center space-x-3">
                         <img src="/icon/cd-128.png" className="w-8 h-8 rounded" />
                         <div>
-                          <p className="text-sm font-medium">Cadence</p>
+                          <p className="text-sm font-medium">{t("gmPlus.cadenceName")}</p>
                           <p className="text-xs text-muted-foreground">
-                            Pomodoro focus timers
+                            {t("gmPlus.cadenceDescription")}
                           </p>
                         </div>
                       </div>
@@ -469,9 +574,27 @@ export function GMPlus() {
                       <div className="flex items-center space-x-3">
                         <img src="/icon/gc-128.png" className="w-8 h-8 rounded" />
                         <div>
-                          <p className="text-sm font-medium">GramControl</p>
+                          <p className="text-sm font-medium">{t("gmPlus.gramControlName")}</p>
                           <p className="text-xs text-muted-foreground">
-                            Block Instagram distractions
+                            {t("gmPlus.gramControlDescription")}
+                          </p>
+                        </div>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-muted-foreground transition-colors" />
+                    </a>
+
+                    <a
+                      href={GM_DESKTOP_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 hover:border-primary/30 transition-colors group no-underline"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <img src="/icon/gm-128.png" className="w-8 h-8 rounded" />
+                        <div>
+                          <p className="text-sm font-medium">{t("gmPlus.desktopName")}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t("gmPlus.desktopDescription")}
                           </p>
                         </div>
                       </div>
@@ -485,75 +608,107 @@ export function GMPlus() {
             {/* Pricing Section - only shown when not Plus */}
             {!user.extensionsPlus && (
             <div className="space-y-4">
-              <h4 className="text-lg font-medium">Lifetime access</h4>
+              <h4 className="text-lg font-medium">{t("gmPlus.choosePlan")}</h4>
 
-              <div className="p-6 border border-border rounded-lg bg-muted/30">
-                <div className="text-center">
-                  <div className="text-3xl font-bold">
-                    $19.99
-                    <span className="text-lg font-normal text-muted-foreground ml-1">
-                      one-time
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Pay once, use forever
-                  </p>
-
-                  {/* Only show upgrade button if logged in */}
-                  {user.email ? (
-                    user.emailVerified ? (
-                      <div>
-                        <Button
-                          className="w-full mt-4"
-                          size="lg"
-                          onClick={handlePayment}
-                          disabled={isPaymentLoading}
-                        >
-                          {isPaymentLoading ? (
-                            <>
-                              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                              Opening checkout...
-                            </>
-                          ) : (
-                            <>
-                              <Crown className="w-4 h-4 mr-2" />
-                              Get Lifetime Access
-                            </>
-                          )}
-                        </Button>
-                        {error && !isLoading && (
-                          <div className="mt-3 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-                            {error}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="mt-4 space-y-2">
-                        <div className="p-3 bg-muted rounded-lg">
-                          <div className="flex items-center justify-center text-muted-foreground">
-                            <Mail className="w-4 h-4 mr-2" />
-                            <span className="text-sm font-medium">
-                              Email verification required
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground text-center mt-1">
-                            Please verify your email to upgrade to Plus
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  ) : isInitialLoading ? (
-                    <div className="mt-4 p-3 bg-muted/50 border border-border rounded-lg">
-                      <div className="flex flex-col items-center justify-center space-y-2">
-                        <RefreshCw className="w-5 h-5 text-muted-foreground animate-spin" />
-                        <p className="text-xs text-muted-foreground">
-                          Loading...
-                        </p>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
+              {/* Plan picker */}
+              <div className="grid grid-cols-3 gap-2">
+                {(["monthly", "yearly", "lifetime"] as Plan[]).map((plan) => {
+                  const labels: Record<Plan, string> = {
+                    monthly: t("gmPlus.planMonthly"),
+                    yearly: t("gmPlus.planYearly"),
+                    lifetime: t("gmPlus.planLifetime"),
+                  };
+                  const periods: Record<Plan, string> = {
+                    monthly: t("gmPlus.perMonth"),
+                    yearly: t("gmPlus.perYear"),
+                    lifetime: t("gmPlus.oneTime"),
+                  };
+                  const priceText = prices
+                    ? prices[plan]
+                    : PLANS[plan].fallbackPrice;
+                  const isSelected = selectedPlan === plan;
+                  return (
+                    <button
+                      key={plan}
+                      type="button"
+                      onClick={() => setSelectedPlan(plan)}
+                      className={`relative p-3 rounded-lg border text-center transition-colors ${
+                        isSelected
+                          ? "border-primary bg-primary/5 ring-1 ring-primary"
+                          : "border-border bg-muted/30 hover:border-primary/40"
+                      }`}
+                    >
+                      {plan === "yearly" && (
+                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold uppercase tracking-wide bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
+                          {t("gmPlus.bestValue")}
+                        </span>
+                      )}
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {labels[plan]}
+                      </p>
+                      <p className="text-lg font-bold mt-1">{priceText}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {periods[plan]}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
+              <p className="text-xs text-muted-foreground">
+                {t("gmPlus.pricesNote")}
+              </p>
+
+              {/* Only show upgrade button if logged in */}
+              {user.email ? (
+                user.emailVerified ? (
+                  <div>
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={handlePayment}
+                      disabled={isPaymentLoading}
+                    >
+                      {isPaymentLoading ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          {t("gmPlus.openingCheckout")}
+                        </>
+                      ) : (
+                        <>
+                          <Crown className="w-4 h-4 mr-2" />
+                          {t("gmPlus.upgradeToPlus")}
+                        </>
+                      )}
+                    </Button>
+                    {error && !isLoading && (
+                      <div className="mt-3 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                        {error}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="p-3 bg-muted rounded-lg">
+                      <div className="flex items-center justify-center text-muted-foreground">
+                        <Mail className="w-4 h-4 mr-2" />
+                        <span className="text-sm font-medium">
+                          {t("gmPlus.emailVerificationRequired")}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground text-center mt-1">
+                        {t("gmPlus.verifyToUpgrade")}
+                      </p>
+                    </div>
+                  </div>
+                )
+              ) : isInitialLoading ? (
+                <div className="p-3 bg-muted/50 border border-border rounded-lg">
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <RefreshCw className="w-5 h-5 text-muted-foreground animate-spin" />
+                    <p className="text-xs text-muted-foreground">{t("gmPlus.loading")}</p>
+                  </div>
+                </div>
+              ) : null}
             </div>
             )}
 
@@ -569,7 +724,7 @@ export function GMPlus() {
                     <div className="p-4 border border-border rounded-lg">
                       <RefreshCw className="w-8 h-8 text-muted-foreground mx-auto mb-2 animate-spin" />
                       <p className="text-sm text-muted-foreground">
-                        Updating user data...
+                        {t("gmPlus.updatingUserData")}
                       </p>
                     </div>
                   ) : (
@@ -587,7 +742,7 @@ export function GMPlus() {
                         >
                           {user.emailVerified
                             ? user.email
-                            : "Please verify your email"}
+                            : t("gmPlus.verifyYourEmail")}
                         </h4>
                         <div
                           className={`text-sm flex items-center justify-center ${
@@ -599,13 +754,13 @@ export function GMPlus() {
                           {user.extensionsPlus && (
                             <span className="mt-2 ml-2 px-1 w-16 text-center py-1 flex items-center justify-center text-xs bg-gradient-to-r from-chart-1 to-chart-2 text-white rounded-full font-semibold">
                               <Sparkles className="inline-block w-3 h-3 mr-1" />
-                              Plus
+                              {t("popup.plus")}
                             </span>
                           )}
                         </div>
                         {!user.emailVerified && (
                           <p className="text-xs text-muted-foreground mt-1">
-                            Check your inbox for a verification email
+                            {t("gmPlus.checkInbox")}
                           </p>
                         )}
                       </div>
@@ -617,7 +772,7 @@ export function GMPlus() {
                           onClick={handleResendVerification}
                         >
                           <RefreshCw className="w-4 h-4 mr-2" />
-                          Resend verification email
+                          {t("gmPlus.resendVerification")}
                         </Button>
                       )}
 
@@ -633,7 +788,7 @@ export function GMPlus() {
                             isLoadingUserData ? "animate-spin" : ""
                           }`}
                         />
-                        Refresh status
+                        {t("gmPlus.refreshStatus")}
                       </Button>
                     </>
                   )}
@@ -643,14 +798,14 @@ export function GMPlus() {
                     className="w-full hover:bg-primary/20"
                     onClick={handleSignOut}
                   >
-                    Sign Out
+                    {t("gmPlus.signOut")}
                   </Button>
                 </div>
               ) : isInitialLoading ? (
                 // Initial loading state
                 <div className="flex flex-col items-center justify-center space-y-3 py-8">
                   <RefreshCw className="w-8 h-8 text-muted-foreground animate-spin" />
-                  <p className="text-sm text-muted-foreground">Loading...</p>
+                  <p className="text-sm text-muted-foreground">{t("gmPlus.loading")}</p>
                 </div>
               ) : (
                 // Login/Register/Forgot Password forms
@@ -660,18 +815,18 @@ export function GMPlus() {
                     <>
                       <div className="text-center mb-4">
                         <p className="text-sm text-muted-foreground">
-                          Enter your email to reset your password
+                          {t("gmPlus.forgotPasswordPrompt")}
                         </p>
                       </div>
 
                       <div className="space-y-4">
                         {forgotPasswordMessage == "" && (
                           <div className="space-y-2">
-                            <Label htmlFor="forgotEmail">Email</Label>
+                            <Label htmlFor="forgotEmail">{t("gmPlus.email")}</Label>
                             <Input
                               id="forgotEmail"
                               type="email"
-                              placeholder="Enter your email"
+                              placeholder={t("gmPlus.emailPlaceholder")}
                               value={forgotPasswordEmail}
                               onChange={(e) =>
                                 setForgotPasswordEmail(e.target.value)
@@ -703,10 +858,10 @@ export function GMPlus() {
                             {isForgotPasswordLoading ? (
                               <>
                                 <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                                Sending Reset Email...
+                                {t("gmPlus.sendingResetEmail")}
                               </>
                             ) : (
-                              "Send Reset Email"
+                              t("gmPlus.sendResetEmail")
                             )}
                           </Button>
                         )}
@@ -718,7 +873,7 @@ export function GMPlus() {
                             className="text-muted-foreground"
                             onClick={handleBackToLogin}
                           >
-                            Back to Login
+                            {t("gmPlus.backToLogin")}
                           </Button>
                         </div>
                       </div>
@@ -728,7 +883,7 @@ export function GMPlus() {
                     <>
                       <div className="text-center mb-4">
                         <p className="text-sm text-muted-foreground">
-                          Sign in or create an account to continue
+                          {t("gmPlus.authPrompt")}
                         </p>
                       </div>
 
@@ -742,7 +897,7 @@ export function GMPlus() {
                           }}
                           className={`flex-1 ${isLogin ? "" : "hover:bg-primary/20"}`}
                         >
-                          Login
+                          {t("gmPlus.login")}
                         </Button>
                         <Button
                           variant={!isLogin ? "default" : "ghost"}
@@ -753,17 +908,17 @@ export function GMPlus() {
                           }}
                           className={`flex-1 ${!isLogin ? "" : "hover:bg-primary/20"}`}
                         >
-                          Register
+                          {t("gmPlus.register")}
                         </Button>
                       </div>
 
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="email">Email</Label>
+                          <Label htmlFor="email">{t("gmPlus.email")}</Label>
                           <Input
                             id="email"
                             type="email"
-                            placeholder="Enter your email"
+                            placeholder={t("gmPlus.emailPlaceholder")}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             disabled={isLoading}
@@ -771,11 +926,11 @@ export function GMPlus() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="password">Password</Label>
+                          <Label htmlFor="password">{t("gmPlus.password")}</Label>
                           <Input
                             id="password"
                             type="password"
-                            placeholder="Enter your password"
+                            placeholder={t("gmPlus.passwordPlaceholder")}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             disabled={isLoading}
@@ -785,12 +940,12 @@ export function GMPlus() {
                         {!isLogin && (
                           <div className="space-y-2">
                             <Label htmlFor="confirmPassword">
-                              Confirm Password
+                              {t("gmPlus.confirmPassword")}
                             </Label>
                             <Input
                               id="confirmPassword"
                               type="password"
-                              placeholder="Confirm your password"
+                              placeholder={t("gmPlus.confirmPasswordPlaceholder")}
                               value={confirmPassword}
                               onChange={(e) =>
                                 setConfirmPassword(e.target.value)
@@ -816,20 +971,20 @@ export function GMPlus() {
                             <>
                               <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                               {isLogin
-                                ? "Signing In..."
-                                : "Creating Account..."}
+                                ? t("gmPlus.signingIn")
+                                : t("gmPlus.creatingAccount")}
                             </>
                           ) : isLogin ? (
-                            "Sign In"
+                            t("gmPlus.signIn")
                           ) : (
-                            "Create Account"
+                            t("gmPlus.createAccount")
                           )}
                         </Button>
 
                         <div className="relative">
                           <div className="relative flex justify-center text-xs uppercase">
                             <span className="bg-muted/50 px-2 text-muted-foreground">
-                              Or continue with
+                              {t("gmPlus.orContinueWith")}
                             </span>
                           </div>
                         </div>
@@ -863,7 +1018,7 @@ export function GMPlus() {
                               fill="#EA4335"
                             />
                           </svg>
-                          Sign in with Google
+                          {t("gmPlus.signInWithGoogle")}
                         </Button>
 
                         {isLogin && (
@@ -874,7 +1029,7 @@ export function GMPlus() {
                               className="text-muted-foreground"
                               onClick={() => setIsForgotPassword(true)}
                             >
-                              Forgot password?
+                              {t("gmPlus.forgotPassword")}
                             </Button>
                           </div>
                         )}

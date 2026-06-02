@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Info } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { validateURL, extractHostnameAndDomain, hasSubdomain, extractHighLevelDomain } from '@/lib/utils';
+import { t, useLocale } from "@/lib/i18n";
 import { syncGroupBudgetsBg, type GroupBudgetRecord } from '@/lib/sync';
 
 interface GlobalTimeBudgetWebsiteFormProps {
@@ -13,6 +14,7 @@ interface GlobalTimeBudgetWebsiteFormProps {
 }
 
 export const GlobalTimeBudgetWebsiteForm: React.FC<GlobalTimeBudgetWebsiteFormProps> = ({ callback, budgetId }) => {
+    useLocale();
     const [websiteValue, setWebsiteValue] = useState("");
     const [websiteSubDomainInfo, setWebsiteSubDomainInfo] = useState<React.ReactNode>(null);
     const [isValidWebsite, setIsValidWebsite] = useState(true);
@@ -59,7 +61,7 @@ export const GlobalTimeBudgetWebsiteForm: React.FC<GlobalTimeBudgetWebsiteFormPr
         if (inputValue && hasSubdomain(inputValue)) {
             setWebsiteSubDomainInfo(
                 <>
-                    This action will only apply to <span className='font-bold'>{domain}</span> but not all <span className='font-bold'>{extractHighLevelDomain(inputValue)}</span> sites.
+                    {t('form.subdomainInfoPre')} <span className='font-bold'>{domain}</span> {t('form.subdomainInfoMid')} <span className='font-bold'>{extractHighLevelDomain(inputValue)}</span> {t('form.subdomainInfoPost')}
                 </>
             );
         } else {
@@ -71,7 +73,7 @@ export const GlobalTimeBudgetWebsiteForm: React.FC<GlobalTimeBudgetWebsiteFormPr
         <div className="w-[99%] mx-auto">
             <div className="mt-5">
                 <div className="mt-5 flex items-center" >
-                    <Label htmlFor="websiteName"> Website </Label>
+                    <Label htmlFor="websiteName"> {t('form.website')} </Label>
                     <TooltipProvider>
                         <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild >
@@ -80,7 +82,7 @@ export const GlobalTimeBudgetWebsiteForm: React.FC<GlobalTimeBudgetWebsiteFormPr
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                                The website URL you want to block (e.g. https://facebook.com).
+                                {t('form.websiteTooltip')}
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -90,18 +92,18 @@ export const GlobalTimeBudgetWebsiteForm: React.FC<GlobalTimeBudgetWebsiteFormPr
                     className='mt-2'
                     id="websiteName"
                     value={websiteValue}
-                    placeholder="Enter website URL"
+                    placeholder={t('form.websitePlaceholder')}
                     onChange={handleWebsiteInput}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') addGlobalTimeBudgetWebsite();
                     }}
                 />
-                {!isValidWebsite && <p className="text-red-500 text-sm mt-2">Invalid URL</p>}
+                {!isValidWebsite && <p className="text-red-500 text-sm mt-2">{t('form.invalidUrl')}</p>}
                 {websiteSubDomainInfo && <p className="text-sm mt-2">{websiteSubDomainInfo}</p>}
             </div>
 
             <div className='w-full text-right mb-2'>
-                <Button className="mt-8" onClick={addGlobalTimeBudgetWebsite}> Add Website </Button>
+                <Button className="mt-8" onClick={addGlobalTimeBudgetWebsite}> {t('form.addWebsiteButton')} </Button>
             </div>
         </div >
     );

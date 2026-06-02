@@ -2,6 +2,7 @@ import * as React from "react"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
 
 import { cn, timeDisplayFormat } from "@/lib/utils"
+import { t, useLocale } from "@/lib/i18n"
 import type { BlockedWebsiteRecord } from "@/lib/sync"
 
 const Progress = React.forwardRef<
@@ -11,6 +12,7 @@ const Progress = React.forwardRef<
     usedToday: number;
   }
 >(({ className, blockedWebsite, usedToday, ...props }, ref) => {
+  useLocale();
 
   const dayOfTheWeek = (new Date().getDay() + 6) % 7;
 
@@ -42,7 +44,7 @@ const Progress = React.forwardRef<
           <div className="absolute inset-0 flex items-center justify-between px-4 text-sm font-normal text-muted-foreground">
             <div>{blockedWebsite.website}</div>
             {allowed === -1 ? (
-              <div>Day Off</div>
+              <div>{t("common.dayOff")}</div>
             ) : (
               <div>{timeDisplayFormat((allowed ?? 0) - usedToday)}</div>
             )}
@@ -50,7 +52,7 @@ const Progress = React.forwardRef<
         </>
       ) : (
         <div className="absolute inset-0 flex items-center justify-between ">
-          <div>Loading</div>
+          <div>{t("progress.loading")}</div>
         </div>
       )}
     </ProgressPrimitive.Root>

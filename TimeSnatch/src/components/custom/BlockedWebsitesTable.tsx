@@ -1,4 +1,5 @@
 import { scheduledBlockDisplay, timeDisplayFormat } from "@/lib/utils"
+import { t, useLocale, weekdaysShort } from "@/lib/i18n"
 import type { BlockedWebsiteRecord, CounterRecord } from '@/lib/sync';
 import { totalForTarget, todayDateStr } from '@/lib/counters';
 import {
@@ -24,6 +25,8 @@ export const BlockedWebsitesTable: React.FC<BlockedWebsitesTableProps> = ({
     deleteBlockedWebsite,
     editBlockedWebsite,
 }) => {
+    useLocale();
+    const dayShort = weekdaysShort();
     const dayOfTheWeek = (new Date().getDay() + 6) % 7;
     const today = todayDateStr();
 
@@ -31,19 +34,19 @@ export const BlockedWebsitesTable: React.FC<BlockedWebsitesTableProps> = ({
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead>Website</TableHead>
-                    <TableHead>Allowed Per Day</TableHead>
-                    <TableHead>Time Left Today</TableHead>
-                    <TableHead>Redirect</TableHead>
-                    <TableHead>Incognito</TableHead>
-                    <TableHead>Scheduled Block</TableHead>
-                    <TableHead className="text-center">Options</TableHead>
+                    <TableHead>{t('blockedWebsitesTable.website')}</TableHead>
+                    <TableHead>{t('blockedWebsitesTable.allowedPerDay')}</TableHead>
+                    <TableHead>{t('blockedWebsitesTable.timeLeftToday')}</TableHead>
+                    <TableHead>{t('blockedWebsitesTable.redirect')}</TableHead>
+                    <TableHead>{t('blockedWebsitesTable.incognito')}</TableHead>
+                    <TableHead>{t('blockedWebsitesTable.scheduledBlock')}</TableHead>
+                    <TableHead className="text-center">{t('blockedWebsitesTable.options')}</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {blockedWebsites.length === 0 && (
                     <TableRow className="h-52">
-                        <TableCell colSpan={7} className="text-center">No blocked websites to display.</TableCell>
+                        <TableCell colSpan={7} className="text-center">{t('blockedWebsitesTable.noWebsites')}</TableCell>
                     </TableRow>
                 )}
                 {blockedWebsites.map((website) => {
@@ -63,7 +66,7 @@ export const BlockedWebsitesTable: React.FC<BlockedWebsitesTableProps> = ({
                                                         : "w-16 h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"
                                                 }
                                             >
-                                                {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
+                                                {dayShort[i]}
                                                 <div className="text-[0.8rem]">
                                                     {timeDisplayFormat(website.timeAllowed[String(i)] ?? 0, true)}
                                                 </div>
@@ -75,18 +78,18 @@ export const BlockedWebsitesTable: React.FC<BlockedWebsitesTableProps> = ({
                                 )}
                             </TableCell>
                             <TableCell>
-                                {allowed === -1 ? "Day Off" : timeDisplayFormat((allowed ?? 0) - used)}
+                                {allowed === -1 ? t('common.dayOff') : timeDisplayFormat((allowed ?? 0) - used)}
                             </TableCell>
-                            <TableCell>{website.redirectUrl === "" ? "Inspiration" : website.redirectUrl}</TableCell>
-                            <TableCell>{website.blockIncognito ? "Yes" : "No"}</TableCell>
+                            <TableCell>{website.redirectUrl === "" ? t('common.inspiration') : website.redirectUrl}</TableCell>
+                            <TableCell>{website.blockIncognito ? t('common.yes') : t('common.no')}</TableCell>
                             <TableCell>
-                                {website.scheduledBlockRanges.length === 0 && "None"}
+                                {website.scheduledBlockRanges.length === 0 && t('common.none')}
                                 {website.scheduledBlockRanges.map((range, index) => (
                                     <div key={index} className={index !== website.scheduledBlockRanges.length - 1 ? "mb-5" : ""}>
                                         {scheduledBlockDisplay(range)}
                                         <div className="flex max-w-[130px] flex-wrap items-center">
                                             {range.days.every(day => day) ? (
-                                                <div className="text-muted-foreground">Every Day</div>
+                                                <div className="text-muted-foreground">{t('common.everyDay')}</div>
                                             ) : (
                                                 Array.from({ length: 7 }, (_, i) => (
                                                     <div key={i} className="flex flex-col items-center">
@@ -97,7 +100,7 @@ export const BlockedWebsitesTable: React.FC<BlockedWebsitesTableProps> = ({
                                                                     : "w-7 h-7 mr-1 mt-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"
                                                             }
                                                         >
-                                                            {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
+                                                            {dayShort[i]}
                                                         </div>
                                                     </div>
                                                 ))

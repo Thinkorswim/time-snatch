@@ -10,6 +10,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button";
+import { t, useLocale } from "@/lib/i18n";
 import type { QuoteRecord } from '@/lib/sync';
 
 
@@ -20,25 +21,26 @@ type QuotesTableProps = {
 };
 
 export const QuotesTable: React.FC<QuotesTableProps> = ({ quotes, addQuote, deleteQuote }) => {
+    useLocale();
     return (
         <>
             <div className="flex items-center justify-between w-full mb-2">
-                <Label className='text-base'>Quotes Management</Label>
-                <Button className="h-7 px-3" onClick={addQuote}> <Plus className='h-4 w-4 mr-1' /> Add Quote </Button>
+                <Label className='text-base'>{t('quotesTable.management')}</Label>
+                <Button className="h-7 px-3" onClick={addQuote}> <Plus className='h-4 w-4 mr-1' /> {t('quotesTable.addQuote')} </Button>
             </div>
             <ScrollArea className="h-[220px] w-full rounded-md border">
                 <Table>
                     <TableHeader>
                         <TableRow className="bg-muted">
-                            <TableHead className="font-medium">Author</TableHead>
-                            <TableHead className="font-medium">Quote</TableHead>
-                            <TableHead className="text-center pr-4">Options</TableHead>
+                            <TableHead className="font-medium">{t('quotesTable.author')}</TableHead>
+                            <TableHead className="font-medium">{t('quotesTable.quote')}</TableHead>
+                            <TableHead className="text-center pr-4">{t('quotesTable.options')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {(quotes === null || quotes.length === 0) && (
                             <TableRow className="h-52">
-                                <TableCell colSpan={3} className="text-center">No quotes to show.</TableCell>
+                                <TableCell colSpan={3} className="text-center">{t('quotesTable.noQuotes')}</TableCell>
                             </TableRow>
                         )}
                         {quotes && quotes.map((record) => (

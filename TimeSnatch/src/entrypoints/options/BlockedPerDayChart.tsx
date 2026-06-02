@@ -18,6 +18,7 @@ import {
     ChartTooltipContent,
 } from "@/components/ui/chart"
 import { Button } from "@/components/ui/button"
+import { t, useLocale } from "@/lib/i18n"
 import type { CounterRecord } from "@/lib/sync"
 import { totalsByDayForKind } from "@/lib/counters"
 
@@ -27,6 +28,7 @@ type BlockedPerDayChartProps = {
 }
 
 export function BlockedPerDayChart({ counters }: BlockedPerDayChartProps) {
+    useLocale();
     // Derive the per-day-per-website map from CounterRecord rows (sum across devices).
     const historicalBlockedPerDay = totalsByDayForKind(counters, "blocked_count")
 
@@ -85,7 +87,7 @@ export function BlockedPerDayChart({ counters }: BlockedPerDayChartProps) {
             const lastWebsite = Object.keys(chartConfig).pop() as string;
             delete chartConfig[lastWebsite];
             chartConfig["others"] = {
-                label: "Others",
+                label: t("charts.others"),
                 color: "hsl(var(--chart-5))",
             }
         }
@@ -144,7 +146,7 @@ export function BlockedPerDayChart({ counters }: BlockedPerDayChartProps) {
         <Card>
             <CardHeader className="flex flex-row justify-between items-start space-y-0 pb-2">
                 <div>
-                    <CardTitle className="text-2xl">Blocked attempts to access distracting websites</CardTitle>
+                    <CardTitle className="text-2xl">{t('charts.blockedAttemptsTitle')}</CardTitle>
                     <CardDescription className="mt-1">{currentDateWindows}</CardDescription>
                 </div>
                 <div>

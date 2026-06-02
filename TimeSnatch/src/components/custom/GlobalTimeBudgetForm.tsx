@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Check, Info, Plus, X } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { validateURL, timeDisplayFormat, numberToDay } from '@/lib/utils';
+import { t, useLocale, weekdaysShort } from "@/lib/i18n";
 import { RoundSlider, ISettingsPointer } from 'mz-react-round-slider';
 import { syncGroupBudgetsBg, type GroupBudgetRecord } from '@/lib/sync';
 
@@ -15,6 +16,8 @@ interface GlobalTimeBudgetFormProps {
 }
 
 export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ callback, existingBudget }) => {
+    useLocale();
+    const dayShort = weekdaysShort();
     // Local alias to avoid renaming every reference below.
     const globalTimeBudgetProp: GroupBudgetRecord = existingBudget;
 
@@ -263,12 +266,12 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
         <div className="w-[99%] mx-auto">
 
             <div className="mt-2">
-                <Label htmlFor="budget-name">Budget Name</Label>
+                <Label htmlFor="budget-name">{t('form.budgetName')}</Label>
                 <Input
                     className="mt-2 max-w-[250px]"
                     id="budget-name"
                     value={name}
-                    placeholder="e.g. Social Media"
+                    placeholder={t('form.budgetNamePlaceholder')}
                     onChange={(e) => setName(e.target.value)}
                     maxLength={30}
                 />
@@ -276,7 +279,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
 
             <div className="mt-5 flex items-center justify-between max-w-[250px]">
                 <div className="flex items-center">
-                    <Label htmlFor="variable-schedule-enabled">Variable Schedule</Label>
+                    <Label htmlFor="variable-schedule-enabled">{t('form.variableSchedule')}</Label>
                     <TooltipProvider>
                         <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild >
@@ -285,7 +288,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-primary text-foreground p-2 rounded" >
-                                Adjust the schedule for specific days of the week.
+                                {t('form.variableScheduleTooltip')}
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -330,7 +333,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                         ]);
                                     }}
                                 >
-                                    {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
+                                    {dayShort[i]}
                                 </div>
                                 <div className="mt-1 text-sm">
                                     {timeDisplayFormat(timeAllowed[dayIndex], true)}
@@ -343,7 +346,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
 
             {!isVariableScheduleEnabled && (
                 <div className="mt-5 flex items-center" >
-                    <Label htmlFor="name" tabIndex={0}> Time Allowed Per Day </Label>
+                    <Label htmlFor="name" tabIndex={0}> {t('form.timeAllowedPerDay')} </Label>
                     <TooltipProvider>
                         <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild >
@@ -352,7 +355,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                                When this time is up, the group of websites will be blocked for the rest of the day. <br /> Set to 00:00 to block the group of websites completely.
+                                {t('form.timeAllowedTooltipGroup1')} <br /> {t('form.timeAllowedTooltipGroup2')}
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -423,7 +426,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                             onFocus={(e) => e.target.select()}
                                         />
                                         <div className='ml-1'>
-                                            hours
+                                            {t('form.hours')}
                                         </div>
                                     </label>
                                 </div>
@@ -440,14 +443,14 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                             onFocus={(e) => e.target.select()}
                                         />
                                         <div className='ml-1'>
-                                            mins
+                                            {t('form.mins')}
                                         </div>
                                     </label>
                                 </div>
                             </div>
                             {timeAllowedHours[0].value === 0 && timeAllowedMinutes[0].value === 0 && (
                                 <div className='mt-3'>
-                                    <Label>Blocked</Label>
+                                    <Label>{t('form.blocked')}</Label>
                                 </div>
                             )}
                         </div>
@@ -460,11 +463,11 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                     {
                         timeAllowed[selectedDay] === -1 ? (
                             <>
-                                <Button onClick={() => handleVariableDayDisabled(false)}>Enable on {numberToDay(selectedDay)}s</Button>
+                                <Button onClick={() => handleVariableDayDisabled(false)}>{t('form.enableOnDay', [numberToDay(selectedDay)])}</Button>
                             </>
                         ) : (
                             <>
-                                <Button onClick={() => handleVariableDayDisabled(true)}>Disable on {numberToDay(selectedDay)}s</Button>
+                                <Button onClick={() => handleVariableDayDisabled(true)}>{t('form.disableOnDay', [numberToDay(selectedDay)])}</Button>
                             </>
                         )
                     }
@@ -474,7 +477,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
             <div className="mt-8">
                 <div className="flex items-center justify-between max-w-[250px]" >
                     <div className="flex items-center" >
-                        <Label htmlFor="redirect-enabled"> Custom Redirect </Label>
+                        <Label htmlFor="redirect-enabled"> {t('form.customRedirect')} </Label>
                         <TooltipProvider>
                             <Tooltip delayDuration={0}>
                                 <TooltipTrigger asChild >
@@ -483,7 +486,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                                    Redirect to a chosen website instead of the default inspirational quotes page.
+                                    {t('form.customRedirectTooltip')}
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -503,11 +506,11 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                 id="redirect"
                                 value={redirectValue}
                                 ref={redirectInputRef}
-                                placeholder="Enter website URL"
+                                placeholder={t('form.websitePlaceholder')}
                                 onChange={(e) => setRedirectValue(e.target.value)}
                             />
                             {!isValidRedirect && (
-                                <p className="text-red-500 text-sm mt-2">Invalid URL</p>
+                                <p className="text-red-500 text-sm mt-2">{t('form.invalidUrl')}</p>
                             )}
                         </>
                     )
@@ -517,7 +520,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
 
             <div className="mt-5 flex items-center justify-between max-w-[250px]">
                 <div className="flex items-center" >
-                    <Label htmlFor="incognito-enabled"> Block in Incognito </Label>
+                    <Label htmlFor="incognito-enabled"> {t('form.blockInIncognito')} </Label>
                     <TooltipProvider>
                         <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild >
@@ -526,7 +529,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                                You need to enable the extension in incognito mode for this to work as shown <a className='text-blue-500' href="https://www.itsupportguides.com/knowledge-base/google-chrome/google-chrome-how-to-enable-extensions-in-incognito/">here</a>.
+                                {t('form.blockInIncognitoTooltipPre')} <a className='text-blue-500' href="https://www.itsupportguides.com/knowledge-base/google-chrome/google-chrome-how-to-enable-extensions-in-incognito/">{t('form.blockInIncognitoTooltipLink')}</a>.
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -543,7 +546,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
             <div className="mt-5">
                 <div className="flex items-center justify-between max-w-[250px]" >
                     <div className="flex items-center" >
-                        <Label htmlFor="nuke-enabled"> Scheduled Block </Label>
+                        <Label htmlFor="nuke-enabled"> {t('form.scheduledBlock')} </Label>
                         <TooltipProvider>
                             <Tooltip delayDuration={0}>
                                 <TooltipTrigger asChild >
@@ -552,7 +555,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                                    Block the group of websites completely during specific intervals of the day.
+                                    {t('form.scheduledBlockTooltipGroup')}
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -601,7 +604,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                         }}
                                     >
                                         <div>
-                                            <div className='mb-1'>Start Time</div>
+                                            <div className='mb-1'>{t('form.startTime')}</div>
                                             <div className="flex items-center">
                                                 {/* Hours */}
                                                 <Input
@@ -640,7 +643,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                                     min={0} max={59}
                                                 />
                                             </div>
-                                            <div className='mt-4 mb-1'>End Time</div>
+                                            <div className='mt-4 mb-1'>{t('form.endTime')}</div>
                                             <div className="flex items-center">
                                                 {/* Hours */}
                                                 <Input
@@ -683,7 +686,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                     </div>
 
                                     <div className="flex flex-wrap justify-center mt-2 ml-5">
-                                        {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'].map((label, i) => {
+                                        {dayShort.map((label, i) => {
                                             const isActive = scheduleDaysArray[index][i];
                                             return (
                                                 <div key={i} className="relative flex flex-col items-center">
@@ -722,7 +725,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                                         </button>
                                                     </TooltipTrigger>
                                                     <TooltipContent className="bg-primary text-foreground p-2 rounded border-1" >
-                                                        Select the days of the week this interval applies to.
+                                                        {t('form.selectDaysTooltip')}
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </TooltipProvider>
@@ -731,20 +734,20 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
 
                                     {index > 0 && (
                                         <div className='w-full text-center mt-5'>
-                                            <Button onClick={() => removeScheduleRange(index)}> <X className='h-5 w-5 mr-1' /> Remove Interval </Button>
+                                            <Button onClick={() => removeScheduleRange(index)}> <X className='h-5 w-5 mr-1' /> {t('form.removeInterval')} </Button>
                                         </div>
                                     )}
                                 </div>
                             ))}
                             <div className='w-full text-center mt-2'>
-                                <Button onClick={addScheduleRange}> <Plus className='h-5 w-5 mr-1' />  Add Interval</Button>
+                                <Button onClick={addScheduleRange}> <Plus className='h-5 w-5 mr-1' />  {t('form.addInterval')}</Button>
                             </div>
                         </>
                     )}
             </div>
 
             <div className='w-full text-right mb-2'>
-                <Button className="mt-8" onClick={updateGlobalTimeBudget}> Update Budget </Button>
+                <Button className="mt-8" onClick={updateGlobalTimeBudget}> {t('form.updateBudget')} </Button>
             </div>
 
         </div >

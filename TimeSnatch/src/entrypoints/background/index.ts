@@ -88,10 +88,10 @@ export default defineBackground(() => {
         if (activeBlockTimer != null) {
             clearInterval(activeBlockTimer);
             activeBlockTimer = null;
-            setBadge("");
             // Push counters one last time so partial seconds don't sit unsynced.
             syncCountersBg().catch(() => {});
         }
+        setBadge("");
     };
 
     let debounceTimer: NodeJS.Timeout | null = null;
@@ -249,16 +249,17 @@ export default defineBackground(() => {
         const currentUrl = extractHostnameAndDomain(tab.url!);
         const target = blockedWebsite?.website || currentUrl || null;
 
-        // Increment counters: this device's contribution.
+        const writes: Promise<void>[] = [];
         if (target) {
-            incrementCounter('restricted_time', target).catch(() => {});
+            writes.push(incrementCounter('restricted_time', target).catch(() => {}));
         }
         if (blockedWebsite) {
-            incrementCounter('website_time', blockedWebsite.website).catch(() => {});
+            writes.push(incrementCounter('website_time', blockedWebsite.website).catch(() => {}));
         }
         for (const g of groupBudgets) {
-            incrementCounter('group_time', g.id).catch(() => {});
+            writes.push(incrementCounter('group_time', g.id).catch(() => {}));
         }
+        await Promise.all(writes);
 
         // Push to server periodically.
         maybeFlushCounters();

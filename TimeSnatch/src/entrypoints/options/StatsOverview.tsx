@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { convertSecondsToHoursMinutesSeconds } from "@/lib/utils"
+import { t, useLocale } from "@/lib/i18n"
 import type { CounterRecord } from "@/lib/sync"
 import { totalsByDayForKind } from "@/lib/counters"
 
@@ -37,15 +38,17 @@ type StatsOverviewProps = {
   counters: CounterRecord[]
 }
 
-const PERIOD_OPTIONS: { value: PeriodKey; label: string }[] = [
-  { value: "last7", label: "Last 7 days" },
-  { value: "thisWeek", label: "This week" },
-  { value: "lastWeek", label: "Last week" },
-  { value: "last31", label: "Last 31 days" },
-  { value: "thisMonth", label: "This month" },
-  { value: "allTime", label: "All time" },
-  { value: "custom", label: "Custom" },
+const PERIOD_KEYS: PeriodKey[] = [
+  "last7",
+  "thisWeek",
+  "lastWeek",
+  "last31",
+  "thisMonth",
+  "allTime",
+  "custom",
 ]
+
+const periodLabel = (key: PeriodKey): string => t(`statsOverview.periods.${key}`)
 
 const toDateStr = (date: Date): string => date.toLocaleDateString("en-CA").slice(0, 10)
 
@@ -196,6 +199,7 @@ const computePeriodStats = (
 }
 
 export function StatsOverview({ counters }: StatsOverviewProps) {
+  useLocale()
   // Derive the per-day-per-website maps by summing CounterRecord rows across all devices.
   const historicalRestrictedTimePerDay = totalsByDayForKind(counters, "restricted_time")
   const historicalBlockedPerDay = totalsByDayForKind(counters, "blocked_count")
@@ -234,33 +238,33 @@ export function StatsOverview({ counters }: StatsOverviewProps) {
     ([, a], [, b]) => b.restricted - a.restricted || b.blocked - a.blocked,
   )
 
-  const selectedLabel = PERIOD_OPTIONS.find((o) => o.value === period)?.label ?? "Last 7 days"
+  const selectedLabel = periodLabel(period)
   const hasAnyData =
     Object.keys(historicalRestrictedTimePerDay ?? {}).length > 0 ||
     Object.keys(historicalBlockedPerDay ?? {}).length > 0
   const rangeLabel =
     period === "allTime" && !hasAnyData
-      ? "No data yet"
+      ? t("statsOverview.noDataYet")
       : isValidDateStr(start) && isValidDateStr(end)
         ? formatRangeLabel(start, end)
-        : "Select a valid range"
+        : t("statsOverview.selectValidRange")
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
       <Card className="gap-5">
         <CardHeader className="gap-1">
-          <CardTitle className="text-3xl font-bold text-muted-foreground">Today</CardTitle>
+          <CardTitle className="text-3xl font-bold text-muted-foreground">{t('statsOverview.today')}</CardTitle>
           <CardDescription>{todayLabel}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-8 mb-6">
             <div>
               <p className="text-3xl font-bold">{daily.totalBlocked}</p>
-              <p className="text-sm text-muted-foreground mt-0.5">blocked attempts</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{t('statsOverview.blockedAttempts')}</p>
             </div>
             <div>
               <p className="text-3xl font-bold">{formatRestrictedTime(daily.totalRestricted)}</p>
-              <p className="text-sm text-muted-foreground mt-0.5">restricted time</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{t('statsOverview.restrictedTime')}</p>
             </div>
           </div>
           {dailyWebsites.length > 0 ? (
@@ -268,7 +272,7 @@ export function StatsOverview({ counters }: StatsOverviewProps) {
               {dailyWebsites.slice(0, 6).map(([site, stat]) => (
                 <div key={site} className="flex items-center gap-2">
                   <span className="text-sm font-medium flex-1 truncate">{site}</span>
-                  <span className="text-sm text-muted-foreground">{stat.blocked} blocked</span>
+                  <span className="text-sm text-muted-foreground">{stat.blocked} {t('statsOverview.blocked')}</span>
                   <span className="text-sm text-muted-foreground">-</span>
                   <span className="text-sm font-mono text-muted-foreground">
                     {formatRestrictedTime(stat.restricted)}
@@ -277,7 +281,7 @@ export function StatsOverview({ counters }: StatsOverviewProps) {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No activity today yet.</p>
+            <p className="text-sm text-muted-foreground">{t('statsOverview.noActivityToday')}</p>
           )}
         </CardContent>
       </Card>
@@ -300,13 +304,13 @@ export function StatsOverview({ counters }: StatsOverviewProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-44">
-                {PERIOD_OPTIONS.map((option) => (
+                {PERIOD_KEYS.map((key) => (
                   <DropdownMenuItem
-                    key={option.value}
-                    onClick={() => setPeriod(option.value)}
+                    key={key}
+                    onClick={() => setPeriod(key)}
                   >
-                    <Check className={`mr-2 h-4 w-4 ${period === option.value ? "opacity-100" : "opacity-0"}`} />
-                    {option.label}
+                    <Check className={`mr-2 h-4 w-4 ${period === key ? "opacity-100" : "opacity-0"}`} />
+                    {periodLabel(key)}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -331,7 +335,7 @@ export function StatsOverview({ counters }: StatsOverviewProps) {
                 className="h-8 text-sm"
               />
               <Button size="sm" className="h-8 flex-shrink-0" disabled={!canApply} onClick={handleApply}>
-                Apply
+                {t('statsOverview.apply')}
               </Button>
             </div>
           )}
@@ -340,11 +344,11 @@ export function StatsOverview({ counters }: StatsOverviewProps) {
           <div className="flex gap-8 mb-6">
             <div>
               <p className="text-3xl font-bold">{periodStats.totalBlocked}</p>
-              <p className="text-sm text-muted-foreground mt-0.5">blocked attempts</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{t('statsOverview.blockedAttempts')}</p>
             </div>
             <div>
               <p className="text-3xl font-bold">{formatRestrictedTime(periodStats.totalRestricted)}</p>
-              <p className="text-sm text-muted-foreground mt-0.5">restricted time</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{t('statsOverview.restrictedTime')}</p>
             </div>
           </div>
           {periodWebsites.length > 0 ? (
@@ -352,14 +356,14 @@ export function StatsOverview({ counters }: StatsOverviewProps) {
               {periodWebsites.slice(0, 8).map(([site, stat]) => (
                 <div key={site} className="flex items-center gap-2">
                   <span className="text-sm font-medium flex-1 truncate">{site}</span>
-                  <span className="text-sm text-muted-foreground">{stat.blocked} blocked</span>
+                  <span className="text-sm text-muted-foreground">{stat.blocked} {t('statsOverview.blocked')}</span>
                   <span className="text-sm text-muted-foreground">-</span>
                   <span className="text-sm font-mono text-muted-foreground">{formatRestrictedTime(stat.restricted)}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No activity for this period.</p>
+            <p className="text-sm text-muted-foreground">{t('statsOverview.noActivityPeriod')}</p>
           )}
         </CardContent>
       </Card>

@@ -18,6 +18,7 @@ import {
     ChartTooltipContent,
 } from "@/components/ui/chart"
 import { timeDisplayFormat } from "@/lib/utils"
+import { t, useLocale } from "@/lib/i18n"
 import { Button } from "@/components/ui/button"
 import type { CounterRecord } from "@/lib/sync"
 import { totalsByDayForKind } from "@/lib/counters"
@@ -28,6 +29,7 @@ type RestrictedPerDayChartProps = {
 }
 
 export function RestrictedPerDayChart({ counters }: RestrictedPerDayChartProps) {
+    useLocale();
     const historicalRestrictedTimePerDay = totalsByDayForKind(counters, "restricted_time")
 
     const [selectedDay, setSelectedDay] = useState(new Date());
@@ -85,7 +87,7 @@ export function RestrictedPerDayChart({ counters }: RestrictedPerDayChartProps) 
             const lastWebsite = Object.keys(chartConfig).pop() as string;
             delete chartConfig[lastWebsite];
             chartConfig["others"] = {
-                label: "Others",
+                label: t("charts.others"),
                 color: "hsl(var(--chart-5))",
             }
         }
@@ -145,7 +147,7 @@ export function RestrictedPerDayChart({ counters }: RestrictedPerDayChartProps) 
         <Card>
             <CardHeader className="flex flex-row justify-between items-start space-y-0 pb-2">
                 <div>
-                    <CardTitle className="text-2xl">Time spent on distracting websites</CardTitle>
+                    <CardTitle className="text-2xl">{t('charts.timeSpentTitle')}</CardTitle>
                     <CardDescription className="mt-1">{currentDateWindows}</CardDescription>
                 </div>
                 <div>

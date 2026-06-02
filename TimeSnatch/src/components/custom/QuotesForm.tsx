@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Button } from '@/components/ui/button';
+import { t, useLocale } from "@/lib/i18n";
 import { syncQuotesBg, type QuoteRecord } from '@/lib/sync';
 
 interface QuotesFormProps {
@@ -10,6 +11,7 @@ interface QuotesFormProps {
 }
 
 export const QuotesForm: React.FC<QuotesFormProps> = ({ callback }) => {
+    useLocale();
     const [authorValue, setAuthorValue] = useState("");
     const [quoteValue, setQuoteValue] = useState("");
 
@@ -69,43 +71,43 @@ export const QuotesForm: React.FC<QuotesFormProps> = ({ callback }) => {
         <div className="w-[99%] mx-auto">
             <div className="mt-5">
                 <div className="mt-5 flex items-center" >
-                    <Label htmlFor="authorName"> Author </Label>
+                    <Label htmlFor="authorName"> {t('quotesForm.author')} </Label>
                 </div>
                 <Input
                     ref={authorInputRef}
                     className='mt-2'
                     id="authorName"
                     value={authorValue}
-                    placeholder="Enter Author Name"
+                    placeholder={t('quotesForm.authorPlaceholder')}
                     onChange={(e) => { setAuthorValue(e.target.value); setIsValidAuthor(true); setIsRepeatedQuote(false); }}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') addQuote();
                     }}
                 />
-                {!isValidAuthor && <p className="text-red-500 text-sm mt-2">The author field cannot be empty.</p>}
+                {!isValidAuthor && <p className="text-red-500 text-sm mt-2">{t('quotesForm.authorEmpty')}</p>}
             </div>
 
             <div className="mt-5">
                 <div className="mt-5 flex items-center" >
-                    <Label htmlFor="quoteText"> Quote </Label>
+                    <Label htmlFor="quoteText"> {t('quotesForm.quote')} </Label>
                 </div>
                 <Textarea
                     ref={quoteInputRef}
                     className='mt-2'
                     id="quoteText"
                     value={quoteValue}
-                    placeholder="Enter Quote"
+                    placeholder={t('quotesForm.quotePlaceholder')}
                     onChange={(e) => { setQuoteValue(e.target.value); setIsValidQuote(true); setIsRepeatedQuote(false); }}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') addQuote();
                     }}
                 />
-                {!isValidQuote && <p className="text-red-500 text-sm mt-2">The quote field cannot be empty.</p>}
+                {!isValidQuote && <p className="text-red-500 text-sm mt-2">{t('quotesForm.quoteEmpty')}</p>}
             </div>
 
-            {isRepeatedQuote && <p className="text-red-500 text-sm mt-2">This quote already exists.</p>}
+            {isRepeatedQuote && <p className="text-red-500 text-sm mt-2">{t('quotesForm.alreadyExists')}</p>}
             <div className='w-full text-right mb-2'>
-                <Button className="mt-8" onClick={addQuote}> Add Quote </Button>
+                <Button className="mt-8" onClick={addQuote}> {t('quotesForm.addQuote')} </Button>
             </div>
         </div>
     );

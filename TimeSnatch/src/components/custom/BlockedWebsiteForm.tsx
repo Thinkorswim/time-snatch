@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Check, Info, Plus, Trash, Trash2, X } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { validateURL, extractHostnameAndDomain, hasSubdomain, extractHighLevelDomain, timeDisplayFormat, numberToDay } from '@/lib/utils';
+import { t, useLocale, weekdaysShort } from "@/lib/i18n";
 import { RoundSlider, ISettingsPointer } from 'mz-react-round-slider';
 import { syncBlockedWebsitesBg, type BlockedWebsiteRecord } from '@/lib/sync';
 
@@ -29,6 +30,8 @@ const blankRecord = (): BlockedWebsiteRecord => ({
 });
 
 export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback, existingRecord, whiteListPathsEnabled }) => {
+    useLocale();
+    const dayShort = weekdaysShort();
     const initialBlockedWebsiteData: BlockedWebsiteRecord = existingRecord ?? blankRecord();
     const initialScheduleEnabled = initialBlockedWebsiteData.scheduledBlockRanges.length > 0;
 
@@ -339,7 +342,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
         if (inputValue && hasSubdomain(inputValue)) {
             setWebsiteSubDomainInfo(
                 <>
-                    This action will only apply to <span className='font-bold'>{domain}</span> but not all <span className='font-bold'>{extractHighLevelDomain(inputValue)}</span> sites.
+                    {t('form.subdomainInfoPre')} <span className='font-bold'>{domain}</span> {t('form.subdomainInfoMid')} <span className='font-bold'>{extractHighLevelDomain(inputValue)}</span> {t('form.subdomainInfoPost')}
                 </>
             );
         } else {
@@ -360,7 +363,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
         <div className="w-[99%] mx-auto">
             <div className="mt-5">
                 <div className="mt-5 flex items-center" >
-                    <Label htmlFor="websiteName"> Website </Label>
+                    <Label htmlFor="websiteName"> {t('form.website')} </Label>
                     <TooltipProvider>
                         <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild >
@@ -369,19 +372,19 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-primary text-foreground p-2 rounded" >
-                                The website URL you want to block (e.g. https://facebook.com).
+                                {t('form.websiteTooltip')}
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 </div>
-                <Input ref={websiteInputRef} className='mt-2' id="websiteName" value={websiteValue} placeholder="Enter website URL" onChange={handleWebsiteInput} />
-                {!isValidWebsite && <p className="text-red-500 text-sm mt-2">Invalid URL</p>}
+                <Input ref={websiteInputRef} className='mt-2' id="websiteName" value={websiteValue} placeholder={t('form.websitePlaceholder')} onChange={handleWebsiteInput} />
+                {!isValidWebsite && <p className="text-red-500 text-sm mt-2">{t('form.invalidUrl')}</p>}
                 {websiteSubDomainInfo && <p className="text-sm mt-2">{websiteSubDomainInfo}</p>}
             </div>
 
             <div className="mt-5 flex items-center justify-between max-w-[250px]">
                 <div className="flex items-center">
-                    <Label htmlFor="variable-schedule-enabled">Variable Schedule</Label>
+                    <Label htmlFor="variable-schedule-enabled">{t('form.variableSchedule')}</Label>
                     <TooltipProvider>
                         <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild >
@@ -390,7 +393,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-primary text-foreground p-2 rounded" >
-                                Adjust the schedule for specific days of the week.
+                                {t('form.variableScheduleTooltip')}
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -435,7 +438,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                         ]);
                                     }}
                                 >
-                                    {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
+                                    {dayShort[i]}
                                 </div>
                                 <div className="mt-1 text-sm">
                                     {timeDisplayFormat(timeAllowed[dayIndex], true)}
@@ -448,7 +451,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
 
             {!isVariableScheduleEnabled && (
                 <div className="mt-5 flex items-center" >
-                    <Label htmlFor="name">  Time Allowed Per Day </Label>
+                    <Label htmlFor="name">  {t('form.timeAllowedPerDay')} </Label>
                     <TooltipProvider>
                         <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild >
@@ -457,7 +460,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                                When this time is up, the website will be blocked for the rest of the day. <br /> Set to 00:00 to block the website completely.
+                                {t('form.timeAllowedTooltipWebsite1')} <br /> {t('form.timeAllowedTooltipWebsite2')}
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -532,7 +535,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                             onFocus={(e) => e.target.select()}
                                         />
                                         <div className='ml-1'>
-                                            hours
+                                            {t('form.hours')}
                                         </div>
                                     </label>
                                 </div>
@@ -549,14 +552,14 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                             onFocus={(e) => e.target.select()}
                                         />
                                         <div className='ml-1'>
-                                            mins
+                                            {t('form.mins')}
                                         </div>
                                     </label>
                                 </div>
                             </div>
                             {timeAllowedHours[0].value === 0 && timeAllowedMinutes[0].value === 0 && (
                                 <div className='mt-3'>
-                                    <Label>Blocked</Label>
+                                    <Label>{t('form.blocked')}</Label>
                                 </div>
                             )}
                         </div>
@@ -569,11 +572,11 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                     {
                         timeAllowed[selectedDay] === -1 ? (
                             <>
-                                <Button onClick={() => handleVariableDayDisabled(false)}>Enable on {numberToDay(selectedDay)}s</Button>
+                                <Button onClick={() => handleVariableDayDisabled(false)}>{t('form.enableOnDay', [numberToDay(selectedDay)])}</Button>
                             </>
                         ) : (
                             <>
-                                <Button onClick={() => handleVariableDayDisabled(true)}>Disable on {numberToDay(selectedDay)}s</Button>
+                                <Button onClick={() => handleVariableDayDisabled(true)}>{t('form.disableOnDay', [numberToDay(selectedDay)])}</Button>
                             </>
                         )
                     }
@@ -583,7 +586,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
             <div className="mt-5">
                 <div className="flex items-center justify-between max-w-[250px]" >
                     <div className="flex items-center" >
-                        <Label htmlFor="redirect-enabled"> Custom Redirect </Label>
+                        <Label htmlFor="redirect-enabled"> {t('form.customRedirect')} </Label>
                         <TooltipProvider>
                             <Tooltip delayDuration={0}>
                                 <TooltipTrigger asChild >
@@ -592,7 +595,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                                    Redirect to a chosen website instead of the default inspirational quotes page.
+                                    {t('form.customRedirectTooltip')}
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -612,11 +615,11 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                 id="redirect"
                                 value={redirectValue}
                                 ref={redirectInputRef}
-                                placeholder="Enter website URL"
+                                placeholder={t('form.websitePlaceholder')}
                                 onChange={(e) => setRedirectValue(e.target.value)}
                             />
                             {!isValidRedirect && (
-                                <p className="text-red-500 text-sm mt-2">Invalid URL</p>
+                                <p className="text-red-500 text-sm mt-2">{t('form.invalidUrl')}</p>
                             )}
                         </>
                     )
@@ -626,7 +629,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
 
             <div className="mt-5 flex items-center justify-between max-w-[250px]">
                 <div className="flex items-center" >
-                    <Label htmlFor="incognito-enabled"> Block in Incognito </Label>
+                    <Label htmlFor="incognito-enabled"> {t('form.blockInIncognito')} </Label>
                     <TooltipProvider>
                         <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild >
@@ -635,7 +638,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                                You need to enable the extension in incognito mode for this to work as shown <a className='text-blue-500' href="https://www.itsupportguides.com/knowledge-base/google-chrome/google-chrome-how-to-enable-extensions-in-incognito/">here</a>.
+                                {t('form.blockInIncognitoTooltipPre')} <a className='text-blue-500' href="https://www.itsupportguides.com/knowledge-base/google-chrome/google-chrome-how-to-enable-extensions-in-incognito/">{t('form.blockInIncognitoTooltipLink')}</a>.
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -652,7 +655,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
             <div className="mt-5">
                 <div className="flex items-center justify-between max-w-[250px]" >
                     <div className="flex items-center" >
-                        <Label htmlFor="nuke-enabled"> Scheduled Block </Label>
+                        <Label htmlFor="nuke-enabled"> {t('form.scheduledBlock')} </Label>
                         <TooltipProvider>
                             <Tooltip delayDuration={0}>
                                 <TooltipTrigger asChild >
@@ -661,7 +664,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                                    Block the website completely during specific intervals of the day.
+                                    {t('form.scheduledBlockTooltipWebsite')}
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -712,7 +715,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                         }}
                                     >
                                         <div>
-                                            <div className='mb-2'>Block From</div>
+                                            <div className='mb-2'>{t('form.blockFrom')}</div>
                                             <div className="flex items-center">
                                                 <label className="flex items-center">
                                                     <Input
@@ -757,7 +760,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                                     />
                                                 </label>
                                             </div>
-                                            <div className='mt-2 mb-2'>Until</div>
+                                            <div className='mt-2 mb-2'>{t('form.until')}</div>
                                             <div className="flex items-center">
                                                 <label className="flex items-center">
                                                     <Input
@@ -806,7 +809,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                     </div>
 
                                     <div className="flex flex-wrap justify-center mt-2 ml-5">
-                                        {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'].map((label, i) => {
+                                        {dayShort.map((label, i) => {
                                             const isActive = scheduleDaysArray[index][i];
                                             return (
                                                 <div key={i} className="relative flex flex-col items-center">
@@ -845,7 +848,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                                         </button>
                                                     </TooltipTrigger>
                                                     <TooltipContent className="bg-primary text-foreground p-2 rounded border-1" >
-                                                        Select the days of the week this interval applies to.
+                                                        {t('form.selectDaysTooltip')}
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </TooltipProvider>
@@ -854,13 +857,13 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
 
                                     {index > 0 && (
                                         <div className='w-full text-center mt-3'>
-                                            <Button onClick={() => removeScheduleRange(index)}> <X className='h-5 w-5 mr-1' /> Remove Interval</Button>
+                                            <Button onClick={() => removeScheduleRange(index)}> <X className='h-5 w-5 mr-1' /> {t('form.removeInterval')}</Button>
                                         </div>
                                     )}
                                 </div>
                             ))}
                             <div className='w-full text-center '>
-                                <Button className="" onClick={addScheduleRange}> <Plus className='h-5 w-5 mr-1' />  Additional Interval</Button>
+                                <Button className="" onClick={addScheduleRange}> <Plus className='h-5 w-5 mr-1' />  {t('form.additionalInterval')}</Button>
                             </div>
                         </>
                     )}
@@ -870,7 +873,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                 <div className="mt-5" ref={enableAllowedPathButtonRef}>
                     <div className="flex items-center justify-between max-w-[250px]" >
                         <div className="flex items-center" >
-                            <Label htmlFor="CustomPathes-enabled"> URL Paths Whitelist </Label>
+                            <Label htmlFor="CustomPathes-enabled"> {t('form.urlPathsWhitelist')} </Label>
                             <TooltipProvider>
                                 <Tooltip delayDuration={0}>
                                     <TooltipTrigger asChild >
@@ -879,7 +882,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                         </button>
                                     </TooltipTrigger>
                                     <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                                        Prevent specific URL paths from being blocked. <br /> For example, block youtube.com but allow youtube.com/watch?v=12345678.
+                                        {t('form.urlPathsWhitelistTooltip1')} <br /> {t('form.urlPathsWhitelistTooltip2')}
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
@@ -899,7 +902,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                     <Input
                                         className="flex-grow"
                                         ref={newAllowedPathInputRef}
-                                        placeholder="Enter URL path to be ignored"
+                                        placeholder={t('form.pathPlaceholder')}
                                     />
                                     <Button
                                         className="ml-2"
@@ -912,7 +915,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                                 }
                                             }
                                         }}
-                                    > Add </Button>
+                                    > {t('common.add')} </Button>
                                 </div>
 
                                 {allowedPathsArray.map((pathname: string, i: number) => (
@@ -941,7 +944,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
 
 
             <div className='w-full text-right mb-2'>
-                <Button className="mt-8" onClick={addBlockedWebsite}>  {existingRecord ? "Save Website" : "Block Website"} </Button>
+                <Button className="mt-8" onClick={addBlockedWebsite}>  {existingRecord ? t('form.saveWebsite') : t('form.blockWebsite')} </Button>
             </div>
 
         </div >

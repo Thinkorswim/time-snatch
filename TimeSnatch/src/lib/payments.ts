@@ -1,106 +1,73 @@
-export type Currency = "USD" | "EUR" | "GBP" | "INR" | "AUD" | "CAD";
+const API_BASE = "https://api.groundedmomentum.com";
 
-export const LIFETIME_PRICE_ID = "pri_01kkyq80fawwqybwy8thh0fs19";
+export type Plan = "monthly" | "yearly" | "lifetime";
 
-export const detectCurrency = (): Currency => {
-  const locale = navigator.language || "en-US";
+// Plus product (pro_01k95stz5gfmmme6qcbrh0eqzd) price IDs.
+export const PLANS: Record<Plan, { priceId: string; fallbackPrice: string }> = {
+  monthly: { priceId: "pri_01k95syjyp90rark44ajp2j8j6", fallbackPrice: "$4.99" },
+  yearly: { priceId: "pri_01k95sxrnsnkb15m2pcrjamfgy", fallbackPrice: "$29.99" },
+  lifetime: { priceId: "pri_01ks8etrbav589r8sxfv2njqxm", fallbackPrice: "$79.99" },
+};
 
-  const currencyMap: Record<string, Currency> = {
-    "en-US": "USD",
-    "en-GB": "GBP",
-    "en-IN": "INR",
-    "en-AU": "AUD",
-    "en-CA": "CAD",
-    "fr-FR": "EUR",
-    "de-DE": "EUR",
-    "es-ES": "EUR",
-    "it-IT": "EUR",
-    "pt-PT": "EUR",
-    "nl-NL": "EUR",
-    "hi-IN": "INR",
-    "fr-CA": "CAD",
+export interface LocalizedPrices {
+  currencyCode: string | null;
+  monthly: string;
+  yearly: string;
+  lifetime: string;
+}
+
+export interface PaymentManagementResponse {
+  success: boolean;
+  hasSubscription: boolean;
+  planType: Plan | null;
+  portalUrl?: string | null;
+  cancelUrl?: string | null;
+  updatePaymentUrl?: string | null;
+}
+
+// Fetch localized prices from the backend (which proxies Paddle's
+// pricing-preview API, geolocated by IP). Falls back to USD list prices.
+export const fetchLocalizedPrices = async (): Promise<LocalizedPrices> => {
+  const fallback: LocalizedPrices = {
+    currencyCode: "USD",
+    monthly: PLANS.monthly.fallbackPrice,
+    yearly: PLANS.yearly.fallbackPrice,
+    lifetime: PLANS.lifetime.fallbackPrice,
   };
 
-  if (currencyMap[locale]) {
-    return currencyMap[locale];
-  }
+  try {
+    const response = await fetch(`${API_BASE}/api/payments/prices`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
 
-  const countryCode = locale.split("-")[1];
-  if (countryCode) {
-    const countryToCurrency: Record<string, Currency> = {
-      US: "USD",
-      GB: "GBP",
-      IN: "INR",
-      AU: "AUD",
-      CA: "CAD",
-      FR: "EUR",
-      DE: "EUR",
-      ES: "EUR",
-      IT: "EUR",
-      PT: "EUR",
-      NL: "EUR",
-      BE: "EUR",
-      AT: "EUR",
-      FI: "EUR",
-      IE: "EUR",
+    if (!response.ok) return fallback;
+
+    const data = await response.json();
+    return {
+      currencyCode: data.currencyCode ?? "USD",
+      monthly: data.monthly?.formatted ?? fallback.monthly,
+      yearly: data.yearly?.formatted ?? fallback.yearly,
+      lifetime: data.lifetime?.formatted ?? fallback.lifetime,
     };
-
-    if (countryToCurrency[countryCode]) {
-      return countryToCurrency[countryCode];
-    }
+  } catch (error) {
+    console.error("Error fetching localized prices:", error);
+    return fallback;
   }
-
-  return "EUR";
-};
-
-export const getCurrencySymbol = (currency: Currency): string => {
-  const symbols: Record<Currency, string> = {
-    USD: "$",
-    EUR: "€",
-    GBP: "£",
-    INR: "₹",
-    AUD: "A$",
-    CAD: "C$",
-  };
-  return symbols[currency];
-};
-
-export const getLifetimePricing = (currency: Currency = detectCurrency()) => {
-  const prices: Record<Currency, string> = {
-    USD: "19.99",
-    EUR: "18.99",
-    GBP: "15.99",
-    INR: "1,699",
-    AUD: "29.99",
-    CAD: "26.99",
-  };
-
-  return {
-    price: prices[currency],
-    currency,
-    currencySymbol: getCurrencySymbol(currency),
-    priceId: LIFETIME_PRICE_ID,
-  };
 };
 
 export const createPaymentTokenRequest = async (
   authToken: string,
-  currency: Currency = detectCurrency()
+  plan: Plan
 ): Promise<string> => {
-  const response = await fetch(
-    "https://api.groundedmomentum.com/api/payments/token",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${authToken}`,
-      },
-      body: JSON.stringify({
-        priceId: LIFETIME_PRICE_ID,
-        currency,
-      }),
-    }
-  );
+  const response = await fetch(`${API_BASE}/api/payments/token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`,
+    },
+    body: JSON.stringify({ priceId: PLANS[plan].priceId }),
+  });
 
   if (!response.ok) {
     const errorData = await response.json();
@@ -113,9 +80,40 @@ export const createPaymentTokenRequest = async (
 
 export const paymentPageRedirect = async (
   authToken: string,
-  currency: Currency = detectCurrency()
+  plan: Plan
 ): Promise<void> => {
-  const paymentToken = await createPaymentTokenRequest(authToken, currency);
+  const paymentToken = await createPaymentTokenRequest(authToken, plan);
   const paymentUrl = `https://groundedmomentum.com/payment?token=${encodeURIComponent(paymentToken)}`;
   window.open(paymentUrl, "_blank");
+};
+
+// Fetch the Paddle customer-portal links so a subscriber can update payment
+// details or cancel. Lifetime/free users get hasSubscription: false.
+export const getPaymentManagementLinks = async (
+  authToken: string
+): Promise<PaymentManagementResponse | null> => {
+  try {
+    const response = await fetch(`${API_BASE}/api/payments/manage`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Authentication failed");
+      }
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message || "Failed to get payment management links"
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching payment management links:", error);
+    throw error;
+  }
 };

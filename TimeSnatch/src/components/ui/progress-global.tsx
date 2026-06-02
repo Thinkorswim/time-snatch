@@ -2,6 +2,7 @@ import * as React from "react"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
 
 import { cn, timeDisplayFormat } from "@/lib/utils"
+import { t, useLocale } from "@/lib/i18n"
 import type { GroupBudgetRecord } from "@/lib/sync"
 
 const ProgressGlobal = React.forwardRef<
@@ -12,6 +13,7 @@ const ProgressGlobal = React.forwardRef<
     usedToday: number;
   }
 >(({ className, globalTimeBudget, website, usedToday, ...props }, ref) => {
+  useLocale();
 
   const dayOfTheWeek = (new Date().getDay() + 6) % 7;
 
@@ -43,7 +45,7 @@ const ProgressGlobal = React.forwardRef<
           <div className="absolute inset-0 flex items-center justify-between px-4 text-sm font-normal text-muted-foreground">
             <div>{website}</div>
             {allowed === -1 ? (
-              <div>Day Off</div>
+              <div>{t("common.dayOff")}</div>
             ) : (
               <div>{timeDisplayFormat((allowed ?? 0) - usedToday)}</div>
             )}
@@ -51,7 +53,7 @@ const ProgressGlobal = React.forwardRef<
         </>
       ) : (
         <div className="absolute inset-0 flex items-center justify-between ">
-          <div>Loading</div>
+          <div>{t("progress.loading")}</div>
         </div>
       )}
     </ProgressPrimitive.Root>

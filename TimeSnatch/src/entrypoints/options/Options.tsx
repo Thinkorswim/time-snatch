@@ -54,8 +54,12 @@ import { QuotesForm } from '@/components/custom/QuotesForm';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Switch } from '@/components/ui/switch';
 import { GMPlus } from './GMPlus';
+import { t, useLocale, useEnsureLocaleLoaded, weekdaysShort, SUPPORTED_LOCALES, setActiveLocale, getActiveLocale, type LocaleCode } from '@/lib/i18n';
 
 function Options() {
+  useLocale();
+  useEnsureLocaleLoaded();
+  const dayShort = weekdaysShort();
   const [isAddWebsiteDialogOpen, setIsWebsiteDialogOpen] = useState(false);
   const [isEditGlobalTimeBudgetDialogOpen, setIsEditGlobalTimeBudgetDialogOpen] = useState(false);
   const [isAddGlobalTimeBudgetWebsiteDialogOpen, setIsAddGlobalTimeBudgetWebsiteDialogOpen] = useState(false);
@@ -160,18 +164,16 @@ function Options() {
     else if (section) setActiveTab(section);
   }, []);
 
-  const [ctaDiscordText, setCtaDiscordText] = useState<string>('');
+  const [ctaDiscordIndex, setCtaDiscordIndex] = useState<number>(1);
   useEffect(() => {
-    const ctaDiscordTexts: string[] = [
-      'Have a question? Join the',
-      'Need help? Join the',
-      'Have a suggestion? Join the',
-      'Want to chat? Join the',
-      'Like productivity? Join the',
-      'Have feedback? Join the',
-    ];
-    setCtaDiscordText(ctaDiscordTexts[Math.floor(Math.random() * ctaDiscordTexts.length)]);
+    setCtaDiscordIndex(Math.floor(Math.random() * 6) + 1);
   }, []);
+  const ctaDiscordText = t(`options.footer.discordCta${ctaDiscordIndex}` as any);
+
+  const activeLocale = getActiveLocale();
+  const handleLocaleChange = (value: string) => {
+    void setActiveLocale(value === 'auto' ? null : (value as LocaleCode));
+  };
 
   // Initial load.
   useEffect(() => {
@@ -361,7 +363,7 @@ function Options() {
           setErrorMsg("");
           if (passwordAction) passwordAction.function(...passwordAction.params);
         } else {
-          setErrorMsg("Incorrect password");
+          setErrorMsg(t("password.incorrect"));
         }
       }
     });
@@ -405,19 +407,19 @@ function Options() {
               <img src="/images/logo.svg" alt="Logo" className="w-10 h-10 mr-4" />
 
               <TabsList className='py-5 px-2'>
-                <TabsTrigger className='data-[state=active]:shadow-none' value="blockedWebsites"><ShieldBan className='w-5 h-5 mr-1' /> Blocked Websites</TabsTrigger>
-                <TabsTrigger className='data-[state=active]:shadow-none' value="globalTimeBudget"><Component className='w-5 h-5 mr-1' /> Group Time Budget</TabsTrigger>
-                <TabsTrigger className='data-[state=active]:shadow-none' value="statistics"><ChartNoAxesColumn className='w-5 h-5 mr-1' /> Statistics </TabsTrigger>
-                <TabsTrigger className='data-[state=active]:shadow-none' value="settings" ><Settings className='w-5 h-5 mr-1' />  Settings</TabsTrigger>
-                <TabsTrigger className='data-[state=active]:shadow-none ml-1 bg-gradient-to-r from-chart-1 to-chart-3 text-white data-[state=active]:text-white transition-all duration-100 hover:scale-105' value="gmplus" ><Sparkles className='w-5 h-5 mr-1' />  GM Plus</TabsTrigger>
+                <TabsTrigger className='data-[state=active]:shadow-none' value="blockedWebsites"><ShieldBan className='w-5 h-5 mr-1' /> {t('options.tabs.blockedWebsites')}</TabsTrigger>
+                <TabsTrigger className='data-[state=active]:shadow-none' value="globalTimeBudget"><Component className='w-5 h-5 mr-1' /> {t('options.tabs.groupTimeBudget')}</TabsTrigger>
+                <TabsTrigger className='data-[state=active]:shadow-none' value="statistics"><ChartNoAxesColumn className='w-5 h-5 mr-1' /> {t('options.tabs.statistics')} </TabsTrigger>
+                <TabsTrigger className='data-[state=active]:shadow-none' value="settings" ><Settings className='w-5 h-5 mr-1' />  {t('options.tabs.settings')}</TabsTrigger>
+                <TabsTrigger className='data-[state=active]:shadow-none ml-1 bg-gradient-to-r from-chart-1 to-chart-3 text-white data-[state=active]:text-white transition-all duration-100 hover:scale-105' value="gmplus" ><Sparkles className='w-5 h-5 mr-1' />  {t('options.tabs.gmPlus')}</TabsTrigger>
               </TabsList>
               {user.extensionsPlus && (
                 <div className="flex items-center space-x-3 ml-4">
                   <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    {syncStatus === "idle" && (<><CheckCircle2 className="w-4 h-4" /><span>Synced</span></>)}
-                    {syncStatus === "syncing" && (<><RefreshCw className="w-4 h-4 animate-pulse" /><span>Syncing...</span></>)}
-                    {syncStatus === "success" && (<><CheckCircle2 className="w-4 h-4" /><span>Synced</span></>)}
-                    {syncStatus === "error" && (<><CloudOff className="w-4 h-4 text-destructive" /><span className="text-destructive">Sync failed</span></>)}
+                    {syncStatus === "idle" && (<><CheckCircle2 className="w-4 h-4" /><span>{t('options.sync.synced')}</span></>)}
+                    {syncStatus === "syncing" && (<><RefreshCw className="w-4 h-4 animate-pulse" /><span>{t('options.sync.syncing')}</span></>)}
+                    {syncStatus === "success" && (<><CheckCircle2 className="w-4 h-4" /><span>{t('options.sync.synced')}</span></>)}
+                    {syncStatus === "error" && (<><CloudOff className="w-4 h-4 text-destructive" /><span className="text-destructive">{t('options.sync.failed')}</span></>)}
                   </div>
                   <Button
                     onClick={handleForceSync}
@@ -427,7 +429,7 @@ function Options() {
                     className="h-8 hover:bg-muted/50 transition-colors shadow-none border-muted-foreground/50 text-muted-foreground"
                   >
                     <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                    Sync Now
+                    {t('options.sync.syncNow')}
                   </Button>
                 </div>
               )}
@@ -436,15 +438,15 @@ function Options() {
             {/* BLOCKED WEBSITES TAB */}
             <TabsContent value="blockedWebsites">
               <div className='flex items-center justify-between mb-5 mt-10'>
-                <div className='text-3xl font-bold w-full text-muted-foreground'>Blocked Websites</div>
+                <div className='text-3xl font-bold w-full text-muted-foreground'>{t('options.blockedWebsites.title')}</div>
                 <div className='w-full text-right '>
-                  <Button onClick={handleAddBlockedWebsite}> <Plus className='h-5 w-5 mr-1' /> Add Website </Button>
+                  <Button onClick={handleAddBlockedWebsite}> <Plus className='h-5 w-5 mr-1' /> {t('options.blockedWebsites.addWebsite')} </Button>
 
                   <Dialog open={isAddWebsiteDialogOpen} onOpenChange={handleDialogClose}>
                     <DialogContent className="bg-card" >
                       <ScrollArea className="max-h-[800px] ">
                         <div className='bg-card m-2 p-4 rounded-md'>
-                          <DialogTitle>Block a Distracting Website</DialogTitle>
+                          <DialogTitle>{t('options.blockedWebsites.blockTitle')}</DialogTitle>
                           <DialogDescription>
                             <BlockedWebsiteForm existingRecord={editingBlockedWebsite} whiteListPathsEnabled={whiteListPathsEnabled} callback={handleDialogClose} />
                           </DialogDescription>
@@ -467,14 +469,14 @@ function Options() {
               <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-[425px] p-6">
                   <DialogHeader>
-                    <DialogTitle>Delete Blocked Website</DialogTitle>
+                    <DialogTitle>{t('options.blockedWebsites.deleteTitle')}</DialogTitle>
                     <DialogDescription className='pt-2'>
-                      Are you sure you want to delete <span className='font-bold'>{websiteToDelete}</span>?
+                      {t('options.blockedWebsites.deleteConfirm')} <span className='font-bold'>{websiteToDelete}</span>?
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter className='pt-2'>
-                    <Button type="submit" variant={"destructive"} onClick={() => { deleteBlockedWebsite(); setDeleteDialogOpen(false); }}>Delete</Button>
-                    <Button type="submit" onClick={() => setDeleteDialogOpen(false)}>Close</Button>
+                    <Button type="submit" variant={"destructive"} onClick={() => { deleteBlockedWebsite(); setDeleteDialogOpen(false); }}>{t('common.delete')}</Button>
+                    <Button type="submit" onClick={() => setDeleteDialogOpen(false)}>{t('common.close')}</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -486,7 +488,7 @@ function Options() {
 
                 <div className='flex items-center justify-between text-3xl font-bold w-full text-muted-foreground mb-8'>
                   <div className='flex items-center'>
-                    Group Time Budgets
+                    {t('options.groupTimeBudgets.title')}
                     <TooltipProvider>
                       <Tooltip delayDuration={0}>
                         <TooltipTrigger asChild >
@@ -495,9 +497,9 @@ function Options() {
                           </button>
                         </TooltipTrigger>
                         <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                          Group time budgets allow you to manage the time spent on groups of websites. <br />
-                          Whenever you visit a website, time will be subtracted from all group budgets containing it. <br />
-                          When a group timer hits 0, all websites from that group will be inaccessible.
+                          {t('options.groupTimeBudgets.tooltipLine1')} <br />
+                          {t('options.groupTimeBudgets.tooltipLine2')} <br />
+                          {t('options.groupTimeBudgets.tooltipLine3')}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -515,17 +517,17 @@ function Options() {
                     >
                       <div className='flex items-center justify-between mb-4'>
                         <div className='text-xl font-bold text-muted-foreground'>
-                          {budget.name?.trim() ? budget.name : `Budget ${displayIndex + 1}`}
+                          {budget.name?.trim() ? budget.name : t('popup.budgetLabel', [displayIndex + 1])}
                           {budget.websites.length > 0 && (
-                            <span className='ml-2 text-sm font-normal'>({budget.websites.length} {budget.websites.length === 1 ? 'website' : 'websites'})</span>
+                            <span className='ml-2 text-sm font-normal'>({budget.websites.length === 1 ? t('options.groupTimeBudgets.websiteCountOne', [budget.websites.length]) : t('options.groupTimeBudgets.websiteCountOther', [budget.websites.length])})</span>
                           )}
                         </div>
                         <div className='flex items-center gap-2'>
                           <Button size="sm" onClick={(e) => { e.stopPropagation(); setSelectedBudgetId(budget.id); handleGlobalTimeBudgetEdit(); }}>
-                            <Pencil className='h-4 w-4 mr-2' /> Edit
+                            <Pencil className='h-4 w-4 mr-2' /> {t('options.groupTimeBudgets.edit')}
                           </Button>
                           <Button size="sm" onClick={(e) => { e.stopPropagation(); setSelectedBudgetId(budget.id); setIsAddGlobalTimeBudgetWebsiteDialogOpen(true); }}>
-                            <Plus className='h-5 w-5 mr-1' /> Add Website
+                            <Plus className='h-5 w-5 mr-1' /> {t('options.groupTimeBudgets.addWebsite')}
                           </Button>
                           <Button
                             size="sm"
@@ -533,7 +535,7 @@ function Options() {
                             disabled={visibleGroupBudgets.length <= 1}
                             onClick={(e) => { e.stopPropagation(); handleDeleteGroupBudget(budget.id); }}
                           >
-                            Delete Budget
+                            {t('options.groupTimeBudgets.deleteBudget')}
                           </Button>
                         </div>
                       </div>
@@ -541,14 +543,14 @@ function Options() {
                       <div className='flex items-stretch w-full gap-4'>
                         <Card className="flex-1">
                           <CardHeader className="p-5">
-                            <CardTitle>Allowed Per Day</CardTitle>
+                            <CardTitle>{t('options.groupTimeBudgets.allowedPerDay')}</CardTitle>
                           </CardHeader>
                           <CardContent className={budget.variableSchedule ? "p-5 pt-0 flex flex-wrap w-[280px]" : "p-5 pt-0 flex flex-wrap"}>
                             {budget.variableSchedule ? (
                               Array.from({ length: 7 }, (_, i) => (
                                 <div key={i} className="flex flex-col items-center mx-1 mt-1">
                                   <div className={i === dayOfTheWeek ? "w-16 h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-primary text-muted-foreground select-none" : "w-16 h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"}>
-                                    {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
+                                    {dayShort[i]}
                                     <div className="text-[0.8rem]">{timeDisplayFormat(budget.timeAllowed[i] ?? 0, true)}</div>
                                   </div>
                                 </div>
@@ -561,7 +563,7 @@ function Options() {
 
                         <Card className="flex-1">
                           <CardHeader className="p-5">
-                            <CardTitle>Time Left Today</CardTitle>
+                            <CardTitle>{t('options.groupTimeBudgets.timeLeftToday')}</CardTitle>
                           </CardHeader>
                           <CardContent className="p-5 pt-0">
                             <div className='text-2xl font-medium text-muted-foreground'>{timeDisplayFormat((budget.timeAllowed[dayOfTheWeek] ?? 0) - budgetUsedToday)}</div>
@@ -570,40 +572,40 @@ function Options() {
 
                         <Card className="flex-1">
                           <CardHeader className="p-5">
-                            <CardTitle>Redirects to</CardTitle>
+                            <CardTitle>{t('options.groupTimeBudgets.redirectsTo')}</CardTitle>
                           </CardHeader>
                           <CardContent className="p-5 pt-0">
-                            <div className='text-2xl font-medium text-muted-foreground'>{budget.redirectUrl === "" ? "Inspiration" : budget.redirectUrl}</div>
+                            <div className='text-2xl font-medium text-muted-foreground'>{budget.redirectUrl === "" ? t('common.inspiration') : budget.redirectUrl}</div>
                           </CardContent>
                         </Card>
 
                         <Card className="flex-1">
                           <CardHeader className="p-5">
-                            <CardTitle>Block in Incognito</CardTitle>
+                            <CardTitle>{t('options.groupTimeBudgets.blockInIncognito')}</CardTitle>
                           </CardHeader>
                           <CardContent className="p-5 pt-0">
-                            <div className='text-2xl font-medium text-muted-foreground'>{budget.blockIncognito ? "Yes" : "No"}</div>
+                            <div className='text-2xl font-medium text-muted-foreground'>{budget.blockIncognito ? t('common.yes') : t('common.no')}</div>
                           </CardContent>
                         </Card>
 
                         <Card className="flex-1">
                           <CardHeader className="p-5">
-                            <CardTitle>Scheduled Block</CardTitle>
+                            <CardTitle>{t('options.groupTimeBudgets.scheduledBlock')}</CardTitle>
                           </CardHeader>
                           <CardContent className="p-5 pt-0 flex flex-wrap">
                             <div className='text-lg font-medium text-muted-foreground'>
-                              {budget.scheduledBlockRanges.length === 0 && "None"}
+                              {budget.scheduledBlockRanges.length === 0 && t('common.none')}
                               {budget.scheduledBlockRanges.map((range, index) => (
                                 <div key={index} className={index !== budget.scheduledBlockRanges.length - 1 ? "mb-5" : ""}>
                                   {scheduledBlockDisplay(range)}
                                   <div className="flex flex-wrap items-center text-sm font-normal">
                                     {range.days.every((day: boolean) => day) ? (
-                                      <div className="text-muted-foreground">Every Day</div>
+                                      <div className="text-muted-foreground">{t('common.everyDay')}</div>
                                     ) : (
                                       Array.from({ length: 7 }, (_, i) => (
                                         <div key={i} className="flex flex-col items-center">
                                           <div className={range.days[i] ? "w-7 h-7 mr-1 mt-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-primary text-muted-foreground select-none" : "w-7 h-7 mr-1 mt-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"}>
-                                            {['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'][i]}
+                                            {dayShort[i]}
                                           </div>
                                         </div>
                                       ))
@@ -638,7 +640,7 @@ function Options() {
                   <DialogContent className="bg-card" >
                     <ScrollArea className="max-h-[800px] ">
                       <div className='bg-card m-2 p-4 rounded-md'>
-                        <DialogTitle>Setup Group Time Budget</DialogTitle>
+                        <DialogTitle>{t('options.groupTimeBudgets.setupTitle')}</DialogTitle>
                         <DialogDescription>
                           {selectedBudget && (
                             <GlobalTimeBudgetForm
@@ -656,7 +658,7 @@ function Options() {
                   <DialogContent className="bg-card" >
                     <ScrollArea className="max-h-[800px] ">
                       <div className='bg-card m-2 p-4 rounded-md'>
-                        <DialogTitle>Add Website to Budget</DialogTitle>
+                        <DialogTitle>{t('options.groupTimeBudgets.addWebsiteTitle')}</DialogTitle>
                         <DialogDescription>
                           {selectedBudget && (
                             <GlobalTimeBudgetWebsiteForm
@@ -674,14 +676,14 @@ function Options() {
               <Dialog open={deleteGlobalDialogOpen} onOpenChange={setDeleteGlobalDialogOpen}>
                 <DialogContent className="sm:max-w-[425px] p-6">
                   <DialogHeader>
-                    <DialogTitle>Delete Group Time Budget Website</DialogTitle>
+                    <DialogTitle>{t('options.groupTimeBudgets.deleteWebsiteTitle')}</DialogTitle>
                     <DialogDescription className='pt-2'>
-                      Are you sure you want to delete <span className='font-bold'>{globalWebsiteToDelete}</span>?
+                      {t('options.groupTimeBudgets.deleteWebsiteConfirm')} <span className='font-bold'>{globalWebsiteToDelete}</span>?
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter className='pt-2'>
-                    <Button type="submit" variant={"destructive"} onClick={() => { deleteGlobalTimeBudgetWebsite(); setDeleteGlobalDialogOpen(false); }}>Delete</Button>
-                    <Button type="submit" onClick={() => setDeleteGlobalDialogOpen(false)}>Close</Button>
+                    <Button type="submit" variant={"destructive"} onClick={() => { deleteGlobalTimeBudgetWebsite(); setDeleteGlobalDialogOpen(false); }}>{t('common.delete')}</Button>
+                    <Button type="submit" onClick={() => setDeleteGlobalDialogOpen(false)}>{t('common.close')}</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -689,17 +691,17 @@ function Options() {
               <Dialog open={deleteBudgetDialogOpen} onOpenChange={setDeleteBudgetDialogOpen}>
                 <DialogContent className="sm:max-w-[425px] p-6">
                   <DialogHeader>
-                    <DialogTitle>Delete Group Time Budget</DialogTitle>
+                    <DialogTitle>{t('options.groupTimeBudgets.deleteBudgetTitle')}</DialogTitle>
                     <DialogDescription className='pt-2'>
-                      Are you sure you want to delete this budget? This will remove all {visibleGroupBudgets.find(g => g.id === budgetToDeleteId)?.websites.length || 0} websites from this budget.
+                      {t('options.groupTimeBudgets.deleteBudgetConfirm', [visibleGroupBudgets.find(g => g.id === budgetToDeleteId)?.websites.length || 0])}
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter className='pt-2'>
                     <Button type="submit" variant={"destructive"} onClick={() => {
                       if (budgetToDeleteId) deleteGroupBudget(budgetToDeleteId);
                       setDeleteBudgetDialogOpen(false);
-                    }}>Delete Budget</Button>
-                    <Button type="submit" onClick={() => setDeleteBudgetDialogOpen(false)}>Close</Button>
+                    }}>{t('options.groupTimeBudgets.deleteBudget')}</Button>
+                    <Button type="submit" onClick={() => setDeleteBudgetDialogOpen(false)}>{t('common.close')}</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -708,7 +710,7 @@ function Options() {
             {/* STATISTICS TAB */}
             <TabsContent value="statistics">
               <div className='mt-10 mb-5'>
-                <div className='text-3xl font-bold w-full text-muted-foreground'>Statistics</div>
+                <div className='text-3xl font-bold w-full text-muted-foreground'>{t('options.statistics.title')}</div>
                 <StatsOverview counters={counters} />
                 <div className='mt-8 bg-muted/50 p-5 rounded-xl'>
                   <div className='mb-5'>
@@ -724,13 +726,32 @@ function Options() {
             {/* SETTINGS TAB */}
             <TabsContent value="settings">
               <div className='mt-10 mb-5'>
-                <div className='text-3xl font-bold w-full text-muted-foreground'>Settings</div>
+                <div className='text-3xl font-bold w-full text-muted-foreground'>{t('options.settings.title')}</div>
 
                 <div className='mt-8 bg-muted/50 p-5 rounded-xl'>
-                  <PasswordProtection
-                    requirePassword={requirePassword}
-                    setRequirePassword={setRequirePassword}
-                  />
+                  <div className="flex items-center justify-between max-w-[350px]">
+                    <Label className='text-base' htmlFor="languageSelect">{t('options.language')}</Label>
+                    <select
+                      id="languageSelect"
+                      value={activeLocale ?? 'auto'}
+                      onChange={(e) => handleLocaleChange(e.target.value)}
+                      className="w-[180px] bg-background border border-input rounded-md px-3 py-2 text-sm"
+                    >
+                      <option value="auto">{t('options.languageAuto')}</option>
+                      {SUPPORTED_LOCALES.map((loc) => (
+                        <option key={loc.code} value={loc.code}>
+                          {loc.nativeName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="mt-6">
+                    <PasswordProtection
+                      requirePassword={requirePassword}
+                      setRequirePassword={setRequirePassword}
+                    />
+                  </div>
                 </div>
 
                 <div className='mt-4 bg-muted/50 p-5 rounded-xl'>
@@ -743,11 +764,11 @@ function Options() {
 
                 <Accordion type="single" collapsible className="w-full bg-muted/50 p-4 mt-4 rounded-2xl">
                   <AccordionItem value="item-1">
-                    <AccordionTrigger className='text-base'>Advanced Settings</AccordionTrigger>
+                    <AccordionTrigger className='text-base'>{t('options.settings.advancedSettings')}</AccordionTrigger>
                     <AccordionContent>
                       <div className="flex items-center justify-between max-w-[350px] mt-4">
                         <div className="flex items-center">
-                          <Label className='text-base' htmlFor="whiteListPathsEnabled">Enable Whitelisting of URL Paths</Label>
+                          <Label className='text-base' htmlFor="whiteListPathsEnabled">{t('options.settings.whitelistPaths')}</Label>
                           <TooltipProvider>
                             <Tooltip delayDuration={0}>
                               <TooltipTrigger asChild>
@@ -756,7 +777,7 @@ function Options() {
                                 </button>
                               </TooltipTrigger>
                               <TooltipContent className="bg-primary text-foreground p-2 rounded">
-                                When blocking a website (e.g. youtube.com) enable the option to allow access to specific URL paths(e.g. youtube.com/watch?v=12345678).
+                                {t('options.settings.whitelistPathsTooltip')}
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -782,7 +803,7 @@ function Options() {
               <DialogContent className="bg-card" >
                 <ScrollArea className="max-h-[800px] ">
                   <div className='bg-card m-2 p-4 rounded-md'>
-                    <DialogTitle>Add New Quote</DialogTitle>
+                    <DialogTitle>{t('options.quotesDialog.addTitle')}</DialogTitle>
                     <DialogDescription>
                       <QuotesForm callback={refreshQuotes} />
                     </DialogDescription>
@@ -794,14 +815,14 @@ function Options() {
             <Dialog open={deleteQuoteDialogOpen} onOpenChange={setDeleteQuoteDialogOpen}>
               <DialogContent className="sm:max-w-[425px] p-6">
                 <DialogHeader>
-                  <DialogTitle>Delete Quote</DialogTitle>
+                  <DialogTitle>{t('options.quotesDialog.deleteTitle')}</DialogTitle>
                   <DialogDescription className='pt-2'>
-                    Are you sure you want to delete this quote <span className='font-bold'>{quoteToDelete?.quote}  - {quoteToDelete?.author}</span>?
+                    {t('options.quotesDialog.deleteConfirm')} <span className='font-bold'>{quoteToDelete?.quote}  - {quoteToDelete?.author}</span>?
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className='pt-2'>
-                  <Button type="submit" variant={"destructive"} onClick={() => { deleteQuote(); setDeleteQuoteDialogOpen(false); }}>Delete</Button>
-                  <Button type="submit" onClick={() => setDeleteQuoteDialogOpen(false)}>Close</Button>
+                  <Button type="submit" variant={"destructive"} onClick={() => { deleteQuote(); setDeleteQuoteDialogOpen(false); }}>{t('common.delete')}</Button>
+                  <Button type="submit" onClick={() => setDeleteQuoteDialogOpen(false)}>{t('common.close')}</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -811,12 +832,12 @@ function Options() {
         <Dialog open={isPasswordEntryDialogOpen} onOpenChange={handlePasswordEntryDialogChange} >
           <DialogContent className="bg-card" >
             <div className='bg-card m-2 p-4 rounded-md'>
-              <DialogTitle>Password Protection</DialogTitle>
+              <DialogTitle>{t('options.passwordDialog.title')}</DialogTitle>
               <DialogDescription>
                 <div className="w-[99%] mx-auto">
                   <div className="mt-5">
                     <div className="mt-5 flex items-center" >
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="password">{t('options.passwordDialog.password')}</Label>
                       <TooltipProvider>
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger asChild >
@@ -825,7 +846,7 @@ function Options() {
                             </button>
                           </TooltipTrigger>
                           <TooltipContent className="bg-primary text-foreground p-2 rounded " >
-                            Enter the password to edit settings.
+                            {t('options.passwordDialog.tooltip')}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -835,12 +856,12 @@ function Options() {
                       type='password'
                       id="passwordCheck"
                       value={passwordCheck}
-                      placeholder="Enter password"
+                      placeholder={t('options.passwordDialog.placeholder')}
                       onChange={(e) => setPasswordCheck(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') handlePasswordCheck(); }}
                     />
                     <div className='w-full text-right mb-2'>
-                      <Button className="mt-5" onClick={() => handlePasswordCheck()}> Disable </Button>
+                      <Button className="mt-5" onClick={() => handlePasswordCheck()}> {t('options.passwordDialog.disable')} </Button>
                     </div>
                     {errorMsg && <p className="text-red-500 text-sm mt-2"> {errorMsg} </p>}
                   </div>

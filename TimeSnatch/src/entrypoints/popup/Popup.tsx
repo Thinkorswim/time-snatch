@@ -5,6 +5,7 @@ import { extractHostnameAndDomain } from '@/lib/utils'
 import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
 import { ProgressGlobal } from '@/components/ui/progress-global'
 import { Cog, ShieldBan, Component, ChartNoAxesColumn, Sparkles } from 'lucide-react'
 import {
@@ -16,8 +17,10 @@ import {
   type CounterRecord,
 } from '@/lib/sync';
 import { totalForTarget, todayDateStr } from '@/lib/counters';
+import { t, useLocale } from '@/lib/i18n';
 
 function Popup() {
+  useLocale();
   document.body.classList.add('w-[300px]')
 
   const [blockedWebsites, setBlockedWebsites] = useState<BlockedWebsiteRecord[]>([]);
@@ -113,7 +116,7 @@ function Popup() {
 
   return (
     <div className='w-full font-geist'>
-      <div className='mb-5 py-3 flex items-center px-4 bg-muted/80 rounded-b-2xl'>
+      <div className='mb-2 py-3 flex items-center px-4 bg-muted/80 rounded-b-2xl'>
         <div className='h-full w-full flex items-center justify-start '>
           <img src="/images/logo.svg" alt="Logo" className="w-5 h-5 mb-0.5" />
           <div className='text-chart-1 ml-2 font-black text-base'>Time Snatch</div>
@@ -127,7 +130,7 @@ function Popup() {
             className="mr-1 cursor-pointer px-2 text-center py-0.5 w-24 text-xs bg-gradient-to-r from-chart-1 to-chart-3 text-white rounded-full font-semibold flex items-center justify-center transition-all duration-100 hover:scale-105"
           >
             <Sparkles className="inline-block w-3 h-3 mr-1" />
-            Plus
+            {t('popup.plus')}
           </span>
         ) : (
           <span
@@ -138,7 +141,7 @@ function Popup() {
             className="mr-1 cursor-pointer w-36 px-1.5 text-center py-0.5 text-xs border  bg-gradient-to-r from-chart-1 to-chart-3 text-white border-chart-1/50 rounded-full font-semibold flex items-center justify-center transition-all duration-100 hover:scale-105"
           >
             <Sparkles className="inline-block w-3 h-3 mr-1" />
-            Get Plus
+            {t('popup.getPlus')}
           </span>
         )}
         <div className='flex items-center justify-end'>
@@ -148,6 +151,12 @@ function Popup() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="blockedWebsites">
+        <div className='flex items-center justify-center w-full mb-1'>
+          <TabsList className='max-w-full mx-1 h-auto'>
+            <TabsTrigger className='min-w-0 whitespace-normal leading-tight text-center data-[state=active]:shadow-none data-[state=active]:text-muted-foreground text-muted-foreground text-xs' value="blockedWebsites"><ShieldBan className='w-5 h-5 mr-1 shrink-0' /> {t('popup.blockedWebsites')} </TabsTrigger>
+            <TabsTrigger className='min-w-0 whitespace-normal leading-tight text-center data-[state=active]:shadow-none data-[state=active]:text-muted-foreground text-muted-foreground text-xs' value="globalTimeBudget"><Component className='w-5 h-5 mr-1 shrink-0' /> {t('popup.groupBudget')}</TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="blockedWebsites">
           <div className="min-h-64">
             <ScrollArea type="always" className="h-[300px] ">
@@ -164,7 +173,7 @@ function Popup() {
                   );
                 })
               ) : (
-                <p className="text-center text-muted-foreground text-sm">No blocked websites to display.</p>
+                <p className="text-center text-muted-foreground text-sm">{t('popup.noBlockedWebsites')}</p>
               )}
             </ScrollArea>
           </div>
@@ -176,7 +185,7 @@ function Popup() {
                 visibleGroupBudgets.map((budget, displayIndex) => {
                   if (budget.websites.length === 0) return null;
                   const usedToday = totalForTarget(counters, today, 'group_time', budget.id);
-                  const label = budget.name?.trim() ? budget.name : `Budget ${displayIndex + 1}`;
+                  const label = budget.name?.trim() ? budget.name : t('popup.budgetLabel', [displayIndex + 1]);
                   return (
                     <div key={budget.id} className="mb-4">
                       <div className="text-xs font-bold text-muted-foreground px-5 mb-1">{label}</div>
@@ -193,18 +202,45 @@ function Popup() {
                   );
                 })
               ) : (
-                <p className="text-center text-muted-foreground text-sm">No group budget websites to display.</p>
+                <p className="text-center text-muted-foreground text-sm">{t('popup.noGroupBudgetWebsites')}</p>
               )}
             </ScrollArea>
           </div>
         </TabsContent>
-        <div className='flex items-center justify-center w-full mt-1'>
-          <TabsList className='mb-1.5 mx-auto'>
-            <TabsTrigger className='data-[state=active]:shadow-none data-[state=active]:text-muted-foreground text-muted-foreground text-xs' value="blockedWebsites"><ShieldBan className='w-5 h-5 mr-1' /> Blocked Websites </TabsTrigger>
-            <TabsTrigger className='data-[state=active]:shadow-none data-[state=active]:text-muted-foreground text-muted-foreground text-xs' value="globalTimeBudget"><Component className='w-5 h-5 mr-1' /> Group Budget</TabsTrigger>
-          </TabsList>
-        </div>
       </Tabs>
+
+      <div className="bg-muted/50 rounded-3xl py-2 px-3 mx-1 mt-1 mb-2">
+        <div className="container mx-auto flex justify-between items-center text-xs">
+          <a
+            href="https://groundedmomentum.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center text-chart-1 font-semibold"
+          >
+            <img
+              src="/images/gm_logo.svg"
+              alt="Grounded Momentum Logo"
+              className="w-5 h-5 mr-1"
+            />
+            groundedmomentum.com
+          </a>
+          <div className="flex items-center font-semibold">
+            <Button
+              className="h-7 gap-2 rounded-lg px-2 py-1 text-xs bg-chart-1 hover:bg-chart-1/70 text-white"
+              onClick={() => {
+                window.open("https://discord.gg/SvTsqKwsgN", "_blank");
+              }}
+            >
+              <img
+                height="16"
+                width="16"
+                src="https://cdn.simpleicons.org/discord/ffffff"
+              />
+              Discord
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

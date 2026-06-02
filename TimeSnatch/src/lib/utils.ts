@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { dayNameFull, t } from "@/lib/i18n"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -176,11 +177,11 @@ export const timeDisplayFormat = (time: number, isVariable: boolean = false, isC
   if (!isChart) {
     if (isVariable) {
       if (time <= 0) {
-        if (time == 0) return "Blocked"
-        else return "Day Off"
+        if (time == 0) return t("form.blocked" as any)
+        else return t("common.dayOff" as any)
       }
     } else {
-      if (time <= 0) return "Blocked"
+      if (time <= 0) return t("form.blocked" as any)
     }
   }
 
@@ -244,22 +245,6 @@ export const compareEncrypted = async (plainText: string, hashedValue: string) =
 };
 
 export const numberToDay = (day: number) => {
-  switch (day) {
-    case 0:
-      return "Monday";
-    case 1:
-      return "Tuesday";
-    case 2:
-      return "Wednesday";
-    case 3:
-      return "Thursday";
-    case 4:
-      return "Friday";
-    case 5:
-      return "Saturday";
-    case 6:
-      return "Sunday";
-    default:
-      return "";
-  }
+  if (day < 0 || day > 6) return "";
+  return dayNameFull(day);
 };
