@@ -611,7 +611,7 @@ export function GMPlus() {
               <h4 className="text-lg font-medium">{t("gmPlus.choosePlan")}</h4>
 
               {/* Plan picker */}
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {(["monthly", "yearly", "lifetime"] as Plan[]).map((plan) => {
                   const labels: Record<Plan, string> = {
                     monthly: t("gmPlus.planMonthly"),

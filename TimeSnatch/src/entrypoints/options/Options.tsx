@@ -400,21 +400,21 @@ function Options() {
 
   return (
     <>
-      <div className='px-10 flex flex-col min-h-screen max-w-screen-lg mx-auto font-geist'>
+      <div className='px-4 sm:px-6 md:px-10 flex flex-col min-h-screen max-w-screen-lg mx-auto font-geist'>
         <div className="flex-grow">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className='mt-8 mb-10 flex items-center'>
+            <div className='mt-8 mb-10 flex flex-col md:flex-row md:items-center gap-3 md:gap-0'>
               <img src="/images/logo.svg" alt="Logo" className="w-10 h-10 mr-4" />
 
-              <TabsList className='py-5 px-2'>
-                <TabsTrigger className='data-[state=active]:shadow-none' value="blockedWebsites"><ShieldBan className='w-5 h-5 mr-1' /> {t('options.tabs.blockedWebsites')}</TabsTrigger>
-                <TabsTrigger className='data-[state=active]:shadow-none' value="globalTimeBudget"><Component className='w-5 h-5 mr-1' /> {t('options.tabs.groupTimeBudget')}</TabsTrigger>
-                <TabsTrigger className='data-[state=active]:shadow-none' value="statistics"><ChartNoAxesColumn className='w-5 h-5 mr-1' /> {t('options.tabs.statistics')} </TabsTrigger>
-                <TabsTrigger className='data-[state=active]:shadow-none' value="settings" ><Settings className='w-5 h-5 mr-1' />  {t('options.tabs.settings')}</TabsTrigger>
-                <TabsTrigger className='data-[state=active]:shadow-none ml-1 bg-gradient-to-r from-chart-1 to-chart-3 text-white data-[state=active]:text-white transition-all duration-100 hover:scale-105' value="gmplus" ><Sparkles className='w-5 h-5 mr-1' />  {t('options.tabs.gmPlus')}</TabsTrigger>
+              <TabsList className='py-5 px-2 flex flex-col items-stretch gap-1 md:gap-0 h-auto w-full md:inline-flex md:flex-row md:items-center md:h-9 md:w-auto'>
+                <TabsTrigger className='w-full justify-start md:w-auto md:justify-center data-[state=active]:shadow-none' value="blockedWebsites"><ShieldBan className='w-5 h-5 mr-1' /> {t('options.tabs.blockedWebsites')}</TabsTrigger>
+                <TabsTrigger className='w-full justify-start md:w-auto md:justify-center data-[state=active]:shadow-none' value="globalTimeBudget"><Component className='w-5 h-5 mr-1' /> {t('options.tabs.groupTimeBudget')}</TabsTrigger>
+                <TabsTrigger className='w-full justify-start md:w-auto md:justify-center data-[state=active]:shadow-none' value="statistics"><ChartNoAxesColumn className='w-5 h-5 mr-1' /> {t('options.tabs.statistics')} </TabsTrigger>
+                <TabsTrigger className='w-full justify-start md:w-auto md:justify-center data-[state=active]:shadow-none' value="settings" ><Settings className='w-5 h-5 mr-1' />  {t('options.tabs.settings')}</TabsTrigger>
+                <TabsTrigger className='w-full justify-start md:w-auto md:justify-center data-[state=active]:shadow-none md:ml-1 bg-gradient-to-r from-chart-1 to-chart-3 text-white data-[state=active]:text-white transition-all duration-100 hover:scale-105' value="gmplus" ><Sparkles className='w-5 h-5 mr-1' />  {t('options.tabs.gmPlus')}</TabsTrigger>
               </TabsList>
               {user.extensionsPlus && (
-                <div className="flex items-center space-x-3 ml-4">
+                <div className="flex items-center space-x-3 md:ml-4">
                   <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                     {syncStatus === "idle" && (<><CheckCircle2 className="w-4 h-4" /><span>{t('options.sync.synced')}</span></>)}
                     {syncStatus === "syncing" && (<><RefreshCw className="w-4 h-4 animate-pulse" /><span>{t('options.sync.syncing')}</span></>)}
@@ -515,14 +515,14 @@ function Options() {
                       className={`mb-6 p-4 rounded-xl ${isSelected ? 'bg-muted/80 border-2 border-primary' : 'bg-muted/50'} cursor-pointer transition-all`}
                       onClick={() => setSelectedBudgetId(budget.id)}
                     >
-                      <div className='flex items-center justify-between mb-4'>
+                      <div className='flex flex-wrap items-center justify-between gap-2 mb-4'>
                         <div className='text-xl font-bold text-muted-foreground'>
                           {budget.name?.trim() ? budget.name : t('popup.budgetLabel', [displayIndex + 1])}
                           {budget.websites.length > 0 && (
                             <span className='ml-2 text-sm font-normal'>({budget.websites.length === 1 ? t('options.groupTimeBudgets.websiteCountOne', [budget.websites.length]) : t('options.groupTimeBudgets.websiteCountOther', [budget.websites.length])})</span>
                           )}
                         </div>
-                        <div className='flex items-center gap-2'>
+                        <div className='flex items-center gap-2 flex-wrap'>
                           <Button size="sm" onClick={(e) => { e.stopPropagation(); setSelectedBudgetId(budget.id); handleGlobalTimeBudgetEdit(); }}>
                             <Pencil className='h-4 w-4 mr-2' /> {t('options.groupTimeBudgets.edit')}
                           </Button>
@@ -540,18 +540,18 @@ function Options() {
                         </div>
                       </div>
 
-                      <div className='flex items-stretch w-full gap-4'>
+                      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:flex lg:items-stretch w-full gap-4'>
                         <Card className="flex-1">
                           <CardHeader className="p-5">
                             <CardTitle>{t('options.groupTimeBudgets.allowedPerDay')}</CardTitle>
                           </CardHeader>
-                          <CardContent className={budget.variableSchedule ? "p-5 pt-0 flex flex-wrap w-[280px]" : "p-5 pt-0 flex flex-wrap"}>
+                          <CardContent className="p-5 pt-0 flex flex-wrap">
                             {budget.variableSchedule ? (
                               Array.from({ length: 7 }, (_, i) => (
                                 <div key={i} className="flex flex-col items-center mx-1 mt-1">
-                                  <div className={i === dayOfTheWeek ? "w-16 h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-primary text-muted-foreground select-none" : "w-16 h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"}>
+                                  <div className={i === dayOfTheWeek ? "w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-primary text-muted-foreground select-none" : "w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 m-1 flex flex-col items-center justify-center rounded-full cursor-pointer bg-background text-muted-foreground select-none"}>
                                     {dayShort[i]}
-                                    <div className="text-[0.8rem]">{timeDisplayFormat(budget.timeAllowed[i] ?? 0, true)}</div>
+                                    <div className="text-[0.65rem] md:text-[0.8rem]">{timeDisplayFormat(budget.timeAllowed[i] ?? 0, true)}</div>
                                   </div>
                                 </div>
                               ))
@@ -729,13 +729,13 @@ function Options() {
                 <div className='text-3xl font-bold w-full text-muted-foreground'>{t('options.settings.title')}</div>
 
                 <div className='mt-8 bg-muted/50 p-5 rounded-xl'>
-                  <div className="flex items-center justify-between max-w-[350px]">
+                  <div className="flex items-center justify-between max-w-[350px] w-full">
                     <Label className='text-base' htmlFor="languageSelect">{t('options.language')}</Label>
                     <select
                       id="languageSelect"
                       value={activeLocale ?? 'auto'}
                       onChange={(e) => handleLocaleChange(e.target.value)}
-                      className="w-[180px] bg-background border border-input rounded-md px-3 py-2 text-sm"
+                      className="w-[180px] max-w-[55%] bg-background border border-input rounded-md px-3 py-2 text-sm"
                     >
                       <option value="auto">{t('options.languageAuto')}</option>
                       {SUPPORTED_LOCALES.map((loc) => (
@@ -766,7 +766,7 @@ function Options() {
                   <AccordionItem value="item-1">
                     <AccordionTrigger className='text-base'>{t('options.settings.advancedSettings')}</AccordionTrigger>
                     <AccordionContent>
-                      <div className="flex items-center justify-between max-w-[350px] mt-4">
+                      <div className="flex items-center justify-between max-w-[350px] w-full mt-4">
                         <div className="flex items-center">
                           <Label className='text-base' htmlFor="whiteListPathsEnabled">{t('options.settings.whitelistPaths')}</Label>
                           <TooltipProvider>
@@ -872,7 +872,7 @@ function Options() {
         </Dialog>
 
         <footer className="bg-muted rounded-t-lg py-5 px-8 mt-10">
-          <div className="container mx-auto flex justify-between items-center text-xs">
+          <div className="container mx-auto flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-center text-center text-xs">
             <a href="https://groundedmomentum.com/" target="_blank" rel="noopener noreferrer" className="flex items-center text-muted-foreground font-semibold transition-colors">
               <img src="/images/gm_logo.svg" alt="Grounded Momentum Logo" className="w-6 h-6 mr-2" /> Grounded Momentum <Dot className='w-2 h-2 mx-1' /> 2026
             </a>

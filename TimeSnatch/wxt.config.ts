@@ -30,6 +30,10 @@ export default defineConfig({
         optional_permissions: [
           "https://api.groundedmomentum.com/*"
         ],
+        
+        browser_specific_settings: {
+          gecko_android: {},
+        },
       };
     }
   },

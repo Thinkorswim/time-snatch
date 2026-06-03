@@ -45,18 +45,18 @@ function Inspiration() {
 
   return (
     <>
-      <div className="flex h-screen items-center justify-start max-w-screen-lg mx-auto font-geistmono text-4xl text-muted-foreground font-light">
+      <div className="flex h-screen items-center justify-start max-w-screen-lg mx-auto px-6 md:px-0 font-geistmono text-2xl sm:text-3xl md:text-4xl text-muted-foreground font-light">
         <div className="flex flex-col items-center">
           {quote}
           {showAuthor && (
-            <div className="flex items-center justify-end mt-5 w-full text-3xl font-extralight">
+            <div className="flex items-center justify-end mt-5 w-full text-xl sm:text-2xl md:text-3xl font-extralight">
               - {author}
             </div>
           )}
         </div>
       </div>
       {reason && (
-        <div className="absolute bottom-4 right-4 text-base font-geistmono text-muted-foreground">
+        <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 max-w-[60vw] text-right text-xs sm:text-base font-geistmono text-muted-foreground">
           {reason}
         </div>
       )}

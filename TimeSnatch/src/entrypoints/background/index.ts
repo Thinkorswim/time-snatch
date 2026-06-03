@@ -25,13 +25,15 @@ export default defineBackground(() => {
         await seedFreshInstall().catch(() => {});
     });
 
-    setInterval(() => {
-        browser.windows.getCurrent((window) => {
-            if (!window.focused) {
-                stopCurrentBlocking();
-            }
-        });
-    }, 1000);
+    if (browser.windows) {
+        setInterval(() => {
+            browser.windows.getCurrent((window) => {
+                if (!window.focused) {
+                    stopCurrentBlocking();
+                }
+            });
+        }, 1000);
+    }
 
     let activeBlockTimer: NodeJS.Timeout | null = null;
 
@@ -51,16 +53,18 @@ export default defineBackground(() => {
         });
     });
 
-    browser.windows.onFocusChanged.addListener((windowId) => {
-        stopCurrentBlocking();
-        if (windowId !== browser.windows.WINDOW_ID_NONE) {
-            browser.tabs.query({ currentWindow: true, active: true }, (tabs) => {
-                if (tabs[0].active && tabs[0].url) {
-                    debounceCheckUrlBlockStatus(tabs[0]);
-                }
-            });
-        }
-    });
+    if (browser.windows) {
+        browser.windows.onFocusChanged.addListener((windowId) => {
+            stopCurrentBlocking();
+            if (windowId !== browser.windows.WINDOW_ID_NONE) {
+                browser.tabs.query({ currentWindow: true, active: true }, (tabs) => {
+                    if (tabs[0].active && tabs[0].url) {
+                        debounceCheckUrlBlockStatus(tabs[0]);
+                    }
+                });
+            }
+        });
+    }
 
     browser.runtime.onConnect.addListener((port) => {
         stopCurrentBlocking();

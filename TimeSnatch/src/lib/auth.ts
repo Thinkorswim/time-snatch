@@ -174,76 +174,117 @@ export const signInWithGoogle = async (): Promise<AuthResponse> => {
       throw new Error("No secureToken parameter found in auth URL");
     }
 
-    // Open auth URL in a popup using browser.windows API
-    const width = 500;
-    const height = 600;
+    const isReturnUrl = (url?: string) =>
+      !!url &&
+      (url.startsWith("https://api.groundedmomentum.com") ||
+        url.startsWith(BASE_URL));
 
-    const currentWindow = await browser.windows.getCurrent();
-    const left = Math.round(
-      (currentWindow.width || screen.width) / 2 -
-        width / 2 +
-        (currentWindow.left || 0)
-    );
-    const top = Math.round(
-      (currentWindow.height || screen.height) / 2 -
-        height / 2 +
-        (currentWindow.top || 0)
-    );
+    // Desktop Firefox/Chrome get a centered popup window. Firefox for Android
+    // has no `windows` API, so fall back to opening the auth flow in a tab.
+    if (browser.windows) {
+      const width = 500;
+      const height = 600;
 
-    const popupWindow = await browser.windows.create({
-      url: authUrl,
-      type: "popup",
-      width,
-      height,
-      left,
-      top,
-    });
+      const currentWindow = await browser.windows.getCurrent();
+      const left = Math.round(
+        (currentWindow.width || screen.width) / 2 -
+          width / 2 +
+          (currentWindow.left || 0)
+      );
+      const top = Math.round(
+        (currentWindow.height || screen.height) / 2 -
+          height / 2 +
+          (currentWindow.top || 0)
+      );
 
-    if (!popupWindow?.id) {
-      throw new Error("Failed to open popup window");
-    }
+      const popupWindow = await browser.windows.create({
+        url: authUrl,
+        type: "popup",
+        width,
+        height,
+        left,
+        top,
+      });
 
-    const windowId = popupWindow.id;
+      if (!popupWindow?.id) {
+        throw new Error("Failed to open popup window");
+      }
 
-    await new Promise<void>((resolve) => {
-      const checkUrl = async () => {
-        try {
-          const tabs = await browser.tabs.query({ windowId });
-          if (tabs.length > 0 && tabs[0].url) {
-            const currentUrl = tabs[0].url;
-            if (
-              currentUrl.startsWith("https://api.groundedmomentum.com") ||
-              currentUrl.startsWith(BASE_URL)
-            ) {
+      const windowId = popupWindow.id;
+
+      await new Promise<void>((resolve) => {
+        const checkUrl = async () => {
+          try {
+            const tabs = await browser.tabs.query({ windowId });
+            if (tabs.length > 0 && isReturnUrl(tabs[0].url)) {
               clearInterval(intervalId);
               removeListener();
               await browser.windows.remove(windowId);
               resolve();
             }
+          } catch (error) {
+            clearInterval(intervalId);
+            removeListener();
+            resolve();
           }
-        } catch (error) {
+        };
+
+        const intervalId = setInterval(checkUrl, 500);
+
+        const removeListener = () => {
+          browser.windows.onRemoved.removeListener(closedListener);
+        };
+
+        const closedListener = (closedWindowId: number) => {
+          if (closedWindowId === windowId) {
+            clearInterval(intervalId);
+            removeListener();
+            resolve();
+          }
+        };
+
+        browser.windows.onRemoved.addListener(closedListener);
+      });
+    } else {
+      const authTab = await browser.tabs.create({ url: authUrl, active: true });
+      const tabId = authTab.id;
+
+      if (tabId == null) {
+        throw new Error("Failed to open auth tab");
+      }
+
+      await new Promise<void>((resolve) => {
+        const cleanup = () => {
           clearInterval(intervalId);
-          removeListener();
-          resolve();
-        }
-      };
+          browser.tabs.onRemoved.removeListener(closedListener);
+        };
 
-      const intervalId = setInterval(checkUrl, 500);
+        const checkUrl = async () => {
+          try {
+            const tab = await browser.tabs.get(tabId);
+            if (isReturnUrl(tab.url)) {
+              cleanup();
+              await browser.tabs.remove(tabId).catch(() => {});
+              resolve();
+            }
+          } catch (error) {
+            cleanup();
+            resolve();
+          }
+        };
 
-      const removeListener = () => {
-        browser.windows.onRemoved.removeListener(closedListener);
-      };
+        const intervalId = setInterval(checkUrl, 500);
 
-      const closedListener = (closedWindowId: number) => {
-        if (closedWindowId === windowId) {
-          clearInterval(intervalId);
-          removeListener();
-          resolve();
-        }
-      };
+        const closedListener = (closedTabId: number) => {
+          if (closedTabId === tabId) {
+            cleanup();
+            resolve();
+          }
+        };
 
-      browser.windows.onRemoved.addListener(closedListener);
-    });
+        browser.tabs.onRemoved.addListener(closedListener);
+      });
+    }
 
     const backendResponse = await apiRequest<AuthResponse>(
       "/api/oauth/exchange-code",
