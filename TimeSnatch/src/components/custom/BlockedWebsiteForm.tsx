@@ -9,6 +9,7 @@ import { validateURL, extractHostnameAndDomain, hasSubdomain, extractHighLevelDo
 import { t, useLocale, weekdaysShort } from "@/lib/i18n";
 import { RoundSlider, ISettingsPointer } from 'mz-react-round-slider';
 import { syncBlockedWebsitesBg, type BlockedWebsiteRecord } from '@/lib/sync';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface BlockedWebsiteFormProps {
     callback?: () => void;
@@ -31,6 +32,7 @@ const blankRecord = (): BlockedWebsiteRecord => ({
 
 export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback, existingRecord, whiteListPathsEnabled }) => {
     useLocale();
+    const isMobile = useIsMobile();
     const dayShort = weekdaysShort();
     const initialBlockedWebsiteData: BlockedWebsiteRecord = existingRecord ?? blankRecord();
     const initialScheduleEnabled = initialBlockedWebsiteData.scheduledBlockRanges.length > 0;
@@ -468,8 +470,9 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
             )}
 
             {timeAllowed[selectedDay] !== -1 && (
-                <div className="mx-14">
+                <div className={isMobile ? "" : "mx-14"}>
                     <div ref={parentRef} className="w-full relative">
+                        {!isMobile && (<>
                         <RoundSlider
                             pointers={timeAllowedMinutes}
                             onChange={handleMinutesChange}
@@ -511,7 +514,13 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                 max={10}
                             />
                         </div>
-                        <div className="" style={{
+                        </>)}
+                        <div className={isMobile ? "py-4" : ""} style={isMobile ? {
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        } : {
                             position: "absolute",
                             top: "45%",
                             left: "50%",
@@ -680,7 +689,8 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                     isScheduleEnabled && (
                         <>
                             {scheduleTimesArray.map((pair, index) => (
-                                <div key={index} className="mx-14 mb-5 mt-3 relative">
+                                <div key={index} className={isMobile ? "mb-5 mt-3" : "mx-14 mb-5 mt-3 relative"}>
+                                    {!isMobile && (
                                     <div className='left-[17px] relative'>
                                         <RoundSlider
                                             pointers={pair}
@@ -702,8 +712,15 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                             max={1440}
                                         />
                                     </div>
+                                    )}
                                     <div
-                                        style={{
+                                        className={isMobile ? "py-2" : ""}
+                                        style={isMobile ? {
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                        } : {
                                             position: "absolute",
                                             top: "22%",
                                             left: "50%",
@@ -808,7 +825,7 @@ export const BlockedWebsiteForm: React.FC<BlockedWebsiteFormProps> = ({ callback
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-wrap justify-center mt-2 ml-5">
+                                    <div className={isMobile ? "flex flex-wrap justify-center mt-2" : "flex flex-wrap justify-center mt-2 ml-5"}>
                                         {dayShort.map((label, i) => {
                                             const isActive = scheduleDaysArray[index][i];
                                             return (

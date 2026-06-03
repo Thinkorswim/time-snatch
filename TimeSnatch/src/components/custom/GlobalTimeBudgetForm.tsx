@@ -9,6 +9,7 @@ import { validateURL, timeDisplayFormat, numberToDay } from '@/lib/utils';
 import { t, useLocale, weekdaysShort } from "@/lib/i18n";
 import { RoundSlider, ISettingsPointer } from 'mz-react-round-slider';
 import { syncGroupBudgetsBg, type GroupBudgetRecord } from '@/lib/sync';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface GlobalTimeBudgetFormProps {
     callback?: () => void;
@@ -17,6 +18,7 @@ interface GlobalTimeBudgetFormProps {
 
 export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ callback, existingBudget }) => {
     useLocale();
+    const isMobile = useIsMobile();
     const dayShort = weekdaysShort();
     // Local alias to avoid renaming every reference below.
     const globalTimeBudgetProp: GroupBudgetRecord = existingBudget;
@@ -363,8 +365,9 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
             )}
 
             {timeAllowed[selectedDay] !== -1 && (
-                <div className="mx-14">
+                <div className={isMobile ? "" : "mx-14"}>
                     <div ref={parentRef} className="w-full relative">
+                        {!isMobile && (<>
                         <RoundSlider
                             pointers={timeAllowedMinutes}
                             onChange={handleMinutesChange}
@@ -402,7 +405,13 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                 max={10}
                             />
                         </div>
-                        <div className="" style={{
+                        </>)}
+                        <div className={isMobile ? "py-4" : ""} style={isMobile ? {
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        } : {
                             position: "absolute",
                             top: "45%",
                             left: "50%",
@@ -571,7 +580,8 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                     isScheduleEnabled && (
                         <>
                             {scheduleTimesArray.map((pair, index) => (
-                                <div key={index} className="mx-14 mt-5 relative">
+                                <div key={index} className={isMobile ? "mt-5" : "mx-14 mt-5 relative"}>
+                                    {!isMobile && (
                                     <div className='left-[17px] relative'>
                                         <RoundSlider
                                             pointers={pair}
@@ -591,8 +601,15 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                             max={1440}
                                         />
                                     </div>
+                                    )}
                                     <div
-                                        style={{
+                                        className={isMobile ? "py-2" : ""}
+                                        style={isMobile ? {
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                        } : {
                                             position: "absolute",
                                             top: "22%",
                                             left: "50%",
@@ -685,7 +702,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-wrap justify-center mt-2 ml-5">
+                                    <div className={isMobile ? "flex flex-wrap justify-center mt-2" : "flex flex-wrap justify-center mt-2 ml-5"}>
                                         {dayShort.map((label, i) => {
                                             const isActive = scheduleDaysArray[index][i];
                                             return (

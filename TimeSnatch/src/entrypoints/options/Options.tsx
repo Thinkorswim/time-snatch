@@ -444,7 +444,7 @@ function Options() {
 
                   <Dialog open={isAddWebsiteDialogOpen} onOpenChange={handleDialogClose}>
                     <DialogContent className="bg-card" >
-                      <ScrollArea className="max-h-[800px] ">
+                      <ScrollArea className="max-h-[78dvh] sm:max-h-[800px] ">
                         <div className='bg-card m-2 p-4 rounded-md'>
                           <DialogTitle>{t('options.blockedWebsites.blockTitle')}</DialogTitle>
                           <DialogDescription>
@@ -638,7 +638,7 @@ function Options() {
 
                 <Dialog open={isEditGlobalTimeBudgetDialogOpen} onOpenChange={() => { setIsEditGlobalTimeBudgetDialogOpen(false) }}>
                   <DialogContent className="bg-card" >
-                    <ScrollArea className="max-h-[800px] ">
+                    <ScrollArea className="max-h-[78dvh] sm:max-h-[800px] ">
                       <div className='bg-card m-2 p-4 rounded-md'>
                         <DialogTitle>{t('options.groupTimeBudgets.setupTitle')}</DialogTitle>
                         <DialogDescription>
@@ -656,7 +656,7 @@ function Options() {
 
                 <Dialog open={isAddGlobalTimeBudgetWebsiteDialogOpen} onOpenChange={() => { setIsAddGlobalTimeBudgetWebsiteDialogOpen(false) }}>
                   <DialogContent className="bg-card" >
-                    <ScrollArea className="max-h-[800px] ">
+                    <ScrollArea className="max-h-[78dvh] sm:max-h-[800px] ">
                       <div className='bg-card m-2 p-4 rounded-md'>
                         <DialogTitle>{t('options.groupTimeBudgets.addWebsiteTitle')}</DialogTitle>
                         <DialogDescription>
@@ -801,7 +801,7 @@ function Options() {
 
             <Dialog open={addQuoteDialogOpen} onOpenChange={() => { setAddQuoteDialogOpen(false) }}>
               <DialogContent className="bg-card" >
-                <ScrollArea className="max-h-[800px] ">
+                <ScrollArea className="max-h-[78dvh] sm:max-h-[800px] ">
                   <div className='bg-card m-2 p-4 rounded-md'>
                     <DialogTitle>{t('options.quotesDialog.addTitle')}</DialogTitle>
                     <DialogDescription>
