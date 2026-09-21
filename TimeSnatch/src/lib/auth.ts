@@ -1,5 +1,6 @@
 import { User, type PlanType } from "../models/User.ts";
 import { syncAll } from "@/lib/sync.ts";
+import { hasApiPermission } from "@/lib/permissions";
 
 const BASE_URL = "https://api.groundedmomentum.com";
 
@@ -114,6 +115,14 @@ export const loadUserFromStorage = async (): Promise<User | null> => {
 
     if (!savedUser) {
       return null;
+    }
+
+    // Without the API host permission the refresh below is blocked by the
+    // browser, which is indistinguishable from a rejected token. Keep the
+    // stored session so a revoked permission doesn't silently sign the user
+    // out — the options page prompts them to re-grant it.
+    if (!(await hasApiPermission())) {
+      return User.fromJSON(savedUser);
     }
 
     const freshUserData = await getUserData(savedUser.authToken);

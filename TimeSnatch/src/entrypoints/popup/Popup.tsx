@@ -16,6 +16,7 @@ import {
   type GroupBudgetRecord,
   type CounterRecord,
 } from '@/lib/sync';
+import { hasApiPermission } from '@/lib/permissions';
 import { totalForTarget, todayDateStr } from '@/lib/counters';
 import { t, useLocale } from '@/lib/i18n';
 
@@ -50,7 +51,7 @@ function Popup() {
 
   // Apply current-tab highlight + auto-tab-switch logic.
   const applyCurrentTabHighlight = (websites: BlockedWebsiteRecord[], budgets: GroupBudgetRecord[]) => {
-    browser.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
       if (!tabs?.[0]?.url) return;
       const website = extractHostnameAndDomain(tabs[0].url);
       if (!website) return;
@@ -71,7 +72,7 @@ function Popup() {
   useEffect(() => {
     browser.runtime.connect();
 
-    browser.storage.local.get(["user", "blockedWebsites", "groupBudgets", "counters"], async (data) => {
+    browser.storage.local.get(["user", "blockedWebsites", "groupBudgets", "counters"]).then(async (data) => {
       if (data.user?.extensionsPlus) setIsProUser(true);
 
       const websites: BlockedWebsiteRecord[] = Array.isArray(data.blockedWebsites) ? data.blockedWebsites : [];
@@ -84,7 +85,9 @@ function Popup() {
       applyCurrentTabHighlight(websites, budgets);
 
       // Pull fresh data + counters from server in background for Pro users.
-      if (data.user?.extensionsPlus && data.user?.authToken) {
+      // Skipped without the API host permission — the requests would just be
+      // blocked, and only the options page can prompt to re-grant it.
+      if (data.user?.extensionsPlus && data.user?.authToken && (await hasApiPermission())) {
         const token = data.user.authToken;
         Promise.all([
           syncBlockedWebsites(token),

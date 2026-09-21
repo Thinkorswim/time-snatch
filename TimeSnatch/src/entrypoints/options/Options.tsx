@@ -32,6 +32,7 @@ import {
   type QuoteRecord,
   type CounterRecord,
 } from "@/lib/sync";
+import { requestApiPermission } from "@/lib/permissions";
 import { totalForTarget, todayDateStr } from "@/lib/counters";
 import { User } from "@/models/User.ts";
 import {
@@ -152,7 +153,7 @@ function Options() {
   // Subscribe to sync status; trigger initial sync for Pro users.
   useEffect(() => {
     const unsubscribe = subscribeSyncStatus((status) => setSyncStatus(status));
-    if (user.extensionsPlus && user.authToken) syncAll(user.authToken);
+    if (user.extensionsPlus && user.authToken) syncAll(user.authToken).catch(() => {});
     return unsubscribe;
   }, [user.extensionsPlus, user.authToken]);
 
@@ -177,7 +178,7 @@ function Options() {
 
   // Initial load.
   useEffect(() => {
-    browser.storage.local.get(['blockedWebsites', 'groupBudgets', 'counters', 'settings', 'quotes'], (data) => {
+    browser.storage.local.get(['blockedWebsites', 'groupBudgets', 'counters', 'settings', 'quotes']).then((data) => {
       if (Array.isArray(data.blockedWebsites)) setBlockedWebsites(data.blockedWebsites);
       if (Array.isArray(data.groupBudgets)) setGroupBudgets(data.groupBudgets);
       if (Array.isArray(data.counters)) setCounters(data.counters);
@@ -354,7 +355,7 @@ function Options() {
   };
 
   const handlePasswordCheck = async () => {
-    browser.storage.local.get(['settings'], async (data) => {
+    browser.storage.local.get(['settings']).then(async (data) => {
       if (data.settings) {
         const isCorrect = await compareEncrypted(passwordCheck, data.settings.password);
         if (isCorrect) {
@@ -374,7 +375,7 @@ function Options() {
   const refreshQuotes = () => {
     setAddQuoteDialogOpen(false);
     setQuoteToDelete(null);
-    browser.storage.local.get(['quotes'], (data) => {
+    browser.storage.local.get(['quotes']).then((data) => {
       if (Array.isArray(data.quotes)) setQuotes(data.quotes);
     });
   };
@@ -393,6 +394,18 @@ function Options() {
   const handleForceSync = async () => {
     if (!user.extensionsPlus || !user.authToken) return;
     await syncAll(user.authToken);
+  };
+
+  // Re-grant the optional host permission after it has been revoked. Must run
+  // straight off the click — browsers reject permission requests that aren't
+  // tied to a user gesture.
+  const handleReconnect = async () => {
+    try {
+      const granted = await requestApiPermission();
+      if (granted) await handleForceSync();
+    } catch {
+      // Denied or dismissed; the status indicator already explains the state.
+    }
   };
 
   const dayOfTheWeek = (new Date().getDay() + 6) % 7;
@@ -420,16 +433,17 @@ function Options() {
                     {syncStatus === "syncing" && (<><RefreshCw className="w-4 h-4 animate-pulse" /><span>{t('options.sync.syncing')}</span></>)}
                     {syncStatus === "success" && (<><CheckCircle2 className="w-4 h-4" /><span>{t('options.sync.synced')}</span></>)}
                     {syncStatus === "error" && (<><CloudOff className="w-4 h-4 text-destructive" /><span className="text-destructive">{t('options.sync.failed')}</span></>)}
+                    {syncStatus === "permission_required" && (<><CloudOff className="w-4 h-4 text-destructive" /><span className="text-destructive">{t('options.sync.permissionRequired')}</span></>)}
                   </div>
                   <Button
-                    onClick={handleForceSync}
+                    onClick={syncStatus === "permission_required" ? handleReconnect : handleForceSync}
                     disabled={syncStatus === "syncing"}
                     size="sm"
                     variant="outline"
                     className="h-8 hover:bg-muted/50 transition-colors shadow-none border-muted-foreground/50 text-muted-foreground"
                   >
                     <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                    {t('options.sync.syncNow')}
+                    {syncStatus === "permission_required" ? t('options.sync.reconnect') : t('options.sync.syncNow')}
                   </Button>
                 </div>
               )}

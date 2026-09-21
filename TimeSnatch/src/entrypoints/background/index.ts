@@ -27,7 +27,7 @@ export default defineBackground(() => {
 
     if (browser.windows) {
         setInterval(() => {
-            browser.windows.getCurrent((window) => {
+            browser.windows.getCurrent().then((window) => {
                 if (!window.focused) {
                     stopCurrentBlocking();
                 }
@@ -46,7 +46,7 @@ export default defineBackground(() => {
 
     browser.tabs.onActivated.addListener((activeInfo) => {
         stopCurrentBlocking();
-        browser.tabs.get(activeInfo.tabId, (tab) => {
+        browser.tabs.get(activeInfo.tabId).then((tab) => {
             if (tab.active && tab.url) {
                 debounceCheckUrlBlockStatus(tab);
             }
@@ -57,7 +57,7 @@ export default defineBackground(() => {
         browser.windows.onFocusChanged.addListener((windowId) => {
             stopCurrentBlocking();
             if (windowId !== browser.windows.WINDOW_ID_NONE) {
-                browser.tabs.query({ currentWindow: true, active: true }, (tabs) => {
+                browser.tabs.query({ currentWindow: true, active: true }).then((tabs) => {
                     if (tabs[0].active && tabs[0].url) {
                         debounceCheckUrlBlockStatus(tabs[0]);
                     }
@@ -69,7 +69,7 @@ export default defineBackground(() => {
     browser.runtime.onConnect.addListener((port) => {
         stopCurrentBlocking();
         port.onDisconnect.addListener(() => {
-            browser.tabs.query({ currentWindow: true, active: true }, (tabs) => {
+            browser.tabs.query({ currentWindow: true, active: true }).then((tabs) => {
                 if (tabs.length > 0 && tabs[0].url) {
                     debounceCheckUrlBlockStatus(tabs[0]);
                 }

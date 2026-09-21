@@ -59,6 +59,8 @@ options:
     syncing: "Syncing..."
     failed: "Sync failed"
     syncNow: "Sync Now"
+    permissionRequired: "Connection permission needed"
+    reconnect: "Reconnect"
 
   blockedWebsites:
     title: "Blocked Websites"

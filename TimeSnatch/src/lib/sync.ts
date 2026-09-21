@@ -1,9 +1,19 @@
+import { hasApiPermission } from "@/lib/permissions";
+
 const BASE_URL = "https://api.groundedmomentum.com";
 
 // Pulled-data freshness throttle (1 minute). Pushes happen on every change.
 const PULL_THROTTLE = 1 * 60 * 1000;
 
-export type SyncStatus = "idle" | "syncing" | "success" | "error";
+// `permission_required`: the optional host permission for BASE_URL is not
+// granted, so every request would be blocked by the browser. Recoverable only
+// from a user gesture — see requestApiPermission.
+export type SyncStatus =
+  | "idle"
+  | "syncing"
+  | "success"
+  | "error"
+  | "permission_required";
 type SyncStatusListener = (status: SyncStatus) => void;
 
 let currentSyncStatus: SyncStatus = "idle";
@@ -478,10 +488,14 @@ export const syncAll = async (authToken: string): Promise<void> => {
   if (!authToken) return;
   if (pending) return pending;
 
-  setSyncStatus("syncing");
-
   pending = (async () => {
     try {
+      if (!(await hasApiPermission())) {
+        setSyncStatus("permission_required");
+        return;
+      }
+
+      setSyncStatus("syncing");
       await syncSettings(authToken);
       await syncBlockedWebsites(authToken);
       await syncGroupBudgets(authToken);
@@ -517,6 +531,10 @@ const getProAuthToken = async (): Promise<string | null> => {
 const bgSync = async (fn: (token: string) => Promise<void>): Promise<void> => {
   const token = await getProAuthToken();
   if (!token) return;
+  if (!(await hasApiPermission())) {
+    setSyncStatus("permission_required");
+    return;
+  }
   setSyncStatus("syncing");
   try {
     await fn(token);
@@ -538,6 +556,9 @@ export const syncCountersBg = (): Promise<void> => bgSync(syncCounters);
 export const syncIfNeeded = async (): Promise<boolean> => {
   const token = await getProAuthToken();
   if (!token) return false;
+  // Nothing in the background can prompt for the permission, so stay quiet and
+  // let the options page surface the reconnect flow.
+  if (!(await hasApiPermission())) return false;
 
   const data = (await browser.storage.local.get("lastPullTime")) as { lastPullTime?: number };
   const last = data.lastPullTime || 0;

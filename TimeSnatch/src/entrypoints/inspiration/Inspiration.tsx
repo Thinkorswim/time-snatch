@@ -16,7 +16,7 @@ function Inspiration() {
     const params = new URLSearchParams(window.location.search);
     setReason(params.get('reason') || '');
 
-    browser.storage.local.get(['quotes'], (data) => {
+    browser.storage.local.get(['quotes']).then((data) => {
       const all = Array.isArray(data.quotes) ? data.quotes : [];
       const visible = all.filter((q: any) => q && !q.deletedAt && typeof q.quote === 'string');
       if (visible.length > 0) {
