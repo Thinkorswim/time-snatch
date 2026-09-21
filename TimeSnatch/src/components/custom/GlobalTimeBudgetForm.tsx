@@ -128,7 +128,7 @@ export const GlobalTimeBudgetForm: React.FC<GlobalTimeBudgetFormProps> = ({ call
             const currentTimeAllowed = timeAllowed[selectedDay]
             const newTimeAllowed = { ...timeAllowed };
             for (let day = 0; day < 7; day++) {
-                newTimeAllowed[day] = value[0].value as number * 60 + Math.floor(currentTimeAllowed / 3600);
+                newTimeAllowed[day] = value[0].value as number * 60 + (currentTimeAllowed - currentTimeAllowed % 3600);
             }
             setTimeAllowed(newTimeAllowed);
         }
