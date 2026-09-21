@@ -40,6 +40,8 @@ export default defineConfig({
   extensionApi: "chrome",
   modules: ["@wxt-dev/module-react", "@wxt-dev/i18n/module"],
   srcDir: "src",
+  // wxt 0.20 moved the default publicDir to <root>/public
+  publicDir: "src/public",
   outDir: "dist",
   vite: () => ({
     plugins: [tailwindcss()],
