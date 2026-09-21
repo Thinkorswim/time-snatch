@@ -4,10 +4,6 @@ export const defaultQuotes = [
         author: "Mark Twain"
     },
     {
-        quote: 'Things may come to those who wait, but only the things left by those who hustle.',
-        author: "Abraham Lincoln"
-    },
-    {
         quote: 'My advice is to never do tomorrow what you can do today. Procrastination is the thief of time.',
         author: "Charles Dickens"
     },
